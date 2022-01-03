@@ -4,7 +4,7 @@ const tag = @import("builtin").os.tag;
 
 const slog = std.log.scoped(.platform);
 
-pub const CANVAS_SIZE: u32 = w4.CANVAS_SIZE;
+pub const CANVAS_SIZE = w4.CANVAS_SIZE;
 pub const BUTTON_1: u8 = w4.BUTTON_1;
 pub const BUTTON_2: u8 = w4.BUTTON_2;
 pub const BUTTON_LEFT: u8 = w4.BUTTON_LEFT;
@@ -38,3 +38,8 @@ fn _blit(sprite: [*]const u8, x: i32, y: i32, width: i32, height: i32, flags: u3
     slog.debug("blit(sprite:{*} x:{} y:{} width:{} height:{} flags:{x}", .{ sprite, x, y, width, height, flags });
 }
 pub const blit = if (tag == .freestanding) w4.blit else _blit;
+
+fn _line(x1: i32, y1: i32, x2: i32, y2: i32) void {
+    slog.debug("line(x1:{} y1:{} x2:{} y2:{}", .{ x1, y1, x2, y2 });
+}
+pub const line = if (tag == .freestanding) w4.line else _line;
