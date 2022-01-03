@@ -38,3 +38,8 @@ fn _blit(sprite: [*]const u8, x: i32, y: i32, width: i32, height: i32, flags: u3
     slog.debug("blit(sprite:{*} x:{} y:{} width:{} height:{} flags:{x}", .{ sprite, x, y, width, height, flags });
 }
 pub const blit = if (tag == .freestanding) w4.blit else _blit;
+
+fn _line(x1: i32, y1: i32, x2: i32, y2: i32) void {
+    slog.debug("line(x1:{} y1:{} x2:{} y2:{}", .{ x1, y1, x2, y2 });
+}
+pub const line = if (tag == .freestanding) w4.line else _line;
