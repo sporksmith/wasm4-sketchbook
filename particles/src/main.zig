@@ -10,10 +10,10 @@ var frame_count: u64 = undefined;
 pub const panic = util.panic;
 
 // Configure logging.
-pub const log_level: std.log.Level = .warn;
+//pub const log_level: std.log.Level = .debug;
 pub const log = util.log;
 
-var particles: Particles(200) = undefined;
+var particles: Particles(1000) = undefined;
 
 export fn start() void {
     platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
@@ -32,42 +32,33 @@ fn Particles(comptime n: u32) type {
         const Self = @This();
         const n = n;
 
-        xs: [n]i16,
-        ys: [n]i16,
-        spxs: [n]i16,
-        spys: [n]i16,
-        vxs: [n]i8,
-        vys: [n]i8,
+        xs: [n]u16,
+        ys: [n]u16,
+        vxs: [n]i16,
+        vys: [n]i16,
 
         fn init(self: *Self) void {
-            var i: u8 = 0;
+            var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                self.xs[i] = platform.CANVAS_SIZE / 2;
-                self.ys[i] = platform.CANVAS_SIZE / 2;
-                self.vxs[i] = rnd.random().intRangeAtMost(i8, -50, 50);
-                self.vys[i] = rnd.random().intRangeAtMost(i8, -50, 50);
-                self.spxs[i] = 0;
-                self.spys[i] = 0;
+                self.xs[i] = @as(u16, (platform.CANVAS_SIZE / 2) << 8) + @bitCast(u16, rnd.random().intRangeAtMost(i16, -10 * 256, 10 * 256));
+                self.ys[i] = @as(u16, (platform.CANVAS_SIZE / 2) << 8) + @bitCast(u16, rnd.random().intRangeAtMost(i16, -10 * 256, 10 * 256));
+                self.vxs[i] = rnd.random().intRangeAtMost(i16, -100, 100);
+                self.vys[i] = rnd.random().intRangeAtMost(i16, -100, 100);
             }
         }
 
         fn update(self: *Self) void {
-            var i: u8 = 0;
+            var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                self.spxs[i] = self.spxs[i] + self.vxs[i];
-                self.xs[i] = @mod(self.xs[i] + @divTrunc(self.spxs[i], 100), platform.CANVAS_SIZE);
-                self.spxs[i] = @rem(self.spxs[i], 100);
-
-                self.spys[i] = self.spys[i] + self.vys[i];
-                self.ys[i] = @mod(self.ys[i] + @divTrunc(self.spys[i], 100), platform.CANVAS_SIZE);
-                self.spys[i] = @rem(self.spys[i], 100);
+                self.xs[i] = @mod(self.xs[i] +% @bitCast(u16, self.vxs[i]), platform.CANVAS_SIZE << 8);
+                self.ys[i] = @mod(self.ys[i] +% @bitCast(u16, self.vys[i]), @as(u16, platform.CANVAS_SIZE << 8));
             }
         }
 
         fn draw(self: Self) void {
-            var i: u8 = 0;
+            var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                platform.rect(self.xs[i], self.ys[i], 1, 1);
+                platform.rect(self.xs[i] >> 8, self.ys[i] >> 8, 1, 1);
             }
         }
     };

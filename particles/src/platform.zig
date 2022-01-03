@@ -4,7 +4,7 @@ const tag = @import("builtin").os.tag;
 
 const slog = std.log.scoped(.platform);
 
-pub const CANVAS_SIZE: u32 = w4.CANVAS_SIZE;
+pub const CANVAS_SIZE = w4.CANVAS_SIZE;
 pub const BUTTON_1: u8 = w4.BUTTON_1;
 pub const BUTTON_2: u8 = w4.BUTTON_2;
 pub const BUTTON_LEFT: u8 = w4.BUTTON_LEFT;
