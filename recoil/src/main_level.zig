@@ -9,27 +9,26 @@ pub const MainLevel = struct {
     const n_players = 2;
 
     players: [n_players]Player,
-    bullets: Particles(10),
+    bullets: [n_players]Particles(10),
 
     pub fn init(self: *MainLevel) void {
         const middle = (platform.CANVAS_SIZE / 2) << 8;
-        self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, platform.GAMEPAD1);
-        self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 4, platform.GAMEPAD2);
+        self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, platform.GAMEPAD1, &self.bullets[0]);
+        self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, platform.GAMEPAD2, &self.bullets[1]);
 
-        self.bullets.live = false;
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
     }
 
     pub fn update(self: *MainLevel) ?main.LevelId {
         for (self.players) |*p| {
-            p.update(self);
+            p.update();
         }
         for (self.players) |p| {
             p.draw();
         }
 
-        if (self.bullets.live) {
-            self.bullets.update_and_draw();
+        for (self.bullets) |*b| {
+            b.update_and_draw();
         }
 
         return null;
@@ -50,25 +49,29 @@ const Player = struct {
     vy: i16,
     draw_color: u8,
     gamepad: *const u8,
+    bullets: *Particles(10),
+
     prev_gamepad: u8 = 0,
 
     const width = 3;
     const height = 3;
     const accel = 30;
 
-    pub fn create(x: u16, y: u16, draw_color: u8, gamepad: *const u8) Player {
-        return Player{ .x = x, .y = y, .vx = 0, .vy = 0, .draw_color = draw_color, .gamepad = gamepad };
+    pub fn create(x: u16, y: u16, draw_color: u8, gamepad: *const u8, bullets: *Particles(10)) Player {
+        bullets.live = false;
+        bullets.draw_color = draw_color;
+        return Player{ .x = x, .y = y, .vx = 0, .vy = 0, .draw_color = draw_color, .gamepad = gamepad, .bullets = bullets };
     }
 
-    fn fire(self: *Player, level: *MainLevel, direction: Direction) void {
+    fn fire(self: *Player, direction: Direction) void {
         const bullet_velocity = 500;
         const bullet_spread = 20;
         const recoil = 1 << 8;
         const bullet_x = self.x + ((Player.width / 2) << 8);
         const bullet_y = self.y + ((Player.height / 2) << 8);
-        level.bullets.live = true;
-        level.bullets.init_xs(bullet_x, -bullet_spread, bullet_spread);
-        level.bullets.init_ys(bullet_y, -bullet_spread, bullet_spread);
+        self.bullets.live = true;
+        self.bullets.init_xs(bullet_x, -bullet_spread, bullet_spread);
+        self.bullets.init_ys(bullet_y, -bullet_spread, bullet_spread);
 
         var bullet_vx = self.vx;
         var bullet_vy = self.vy;
@@ -90,27 +93,27 @@ const Player = struct {
                 self.vy -= recoil;
             },
         }
-        level.bullets.init_vxs(bullet_vx, -bullet_spread, bullet_spread);
-        level.bullets.init_vys(bullet_vy, -bullet_spread, bullet_spread);
+        self.bullets.init_vxs(bullet_vx, -bullet_spread, bullet_spread);
+        self.bullets.init_vys(bullet_vy, -bullet_spread, bullet_spread);
 
         platform.tone(370 | (160 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
     }
 
-    pub fn update(self: *Player, level: *MainLevel) void {
+    pub fn update(self: *Player) void {
         const gamepad = self.gamepad.*;
         const just_pressed = gamepad & (gamepad ^ self.prev_gamepad);
 
         if (just_pressed & platform.BUTTON_LEFT != 0) {
-            self.fire(level, .LEFT);
+            self.fire(.LEFT);
         }
         if (just_pressed & platform.BUTTON_RIGHT != 0) {
-            self.fire(level, .RIGHT);
+            self.fire(.RIGHT);
         }
         if (just_pressed & platform.BUTTON_UP != 0) {
-            self.fire(level, .UP);
+            self.fire(.UP);
         }
         if (just_pressed & platform.BUTTON_DOWN != 0) {
-            self.fire(level, .DOWN);
+            self.fire(.DOWN);
         }
         self.x = add_velocity(self.x, self.vx);
         self.y = add_velocity(self.y, self.vy);
@@ -132,7 +135,8 @@ fn Particles(comptime n: u32) type {
         ys: [n]u16,
         vxs: [n]i16,
         vys: [n]i16,
-        live: bool,
+        live: bool = false,
+        draw_color: u8 = 0,
 
         pub fn init_xs(self: *Self, x: u16, rand_min: i16, rand_most: i16) void {
             var i: usize = 0;
@@ -164,7 +168,7 @@ fn Particles(comptime n: u32) type {
 
         fn update_and_draw(self: *Self) void {
             var i: usize = 0;
-            platform.DRAW_COLORS.* = 2;
+            platform.DRAW_COLORS.* = self.draw_color;
             while (i < Self.n) : (i += 1) {
                 const old_x = self.xs[i];
                 const old_y = self.ys[i];
