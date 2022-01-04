@@ -68,6 +68,10 @@ fn pixel(x: i32, y: i32) void {
     platform.FRAMEBUFFER[idx] = (color << shift) | (platform.FRAMEBUFFER[idx] & ~mask);
 }
 
+fn fire_sound() void {
+    platform.tone(370 | (160 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
+}
+
 const Player = struct {
     x: u16,
     y: u16,
@@ -101,7 +105,7 @@ const Player = struct {
                 bullets.init_vxs(self.vx - bullet_velocity, -bullet_spread, bullet_spread);
                 bullets.init_vys(self.vy, -bullet_spread, bullet_spread);
                 self.vx += recoil;
-                platform.tone(150 | (80 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
+                fire_sound();
             }
             if (just_pressed & platform.BUTTON_RIGHT != 0) {
                 bullets.live = true;
@@ -110,7 +114,7 @@ const Player = struct {
                 bullets.init_vxs(self.vx + bullet_velocity, -bullet_spread, bullet_spread);
                 bullets.init_vys(self.vy, -bullet_spread, bullet_spread);
                 self.vx -= recoil;
-                platform.tone(150 | (80 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
+                fire_sound();
             }
             if (just_pressed & platform.BUTTON_DOWN != 0) {
                 bullets.live = true;
@@ -119,7 +123,7 @@ const Player = struct {
                 bullets.init_vxs(self.vx, -bullet_spread, bullet_spread);
                 bullets.init_vys(self.vy + bullet_velocity, -bullet_spread, bullet_spread);
                 self.vy -= recoil;
-                platform.tone(150 | (80 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
+                fire_sound();
             }
             if (just_pressed & platform.BUTTON_UP != 0) {
                 bullets.live = true;
@@ -128,7 +132,7 @@ const Player = struct {
                 bullets.init_vxs(self.vx, -bullet_spread, bullet_spread);
                 bullets.init_vys(self.vy - bullet_velocity, -bullet_spread, bullet_spread);
                 self.vy += recoil;
-                platform.tone(150 | (80 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
+                fire_sound();
             }
         } else if (gamepad & platform.BUTTON_2 != 0) {
             // Brake
