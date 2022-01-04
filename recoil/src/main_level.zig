@@ -13,7 +13,7 @@ pub const MainLevel = struct {
 
     pub fn init(self: *MainLevel) void {
         const middle = (platform.CANVAS_SIZE / 2) << 8;
-        self.players[0] = Player.create(middle, middle);
+        self.players[0] = Player.create(middle, middle, 3);
 
         self.bullets.live = false;
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
@@ -40,13 +40,14 @@ const Player = struct {
     y: u16,
     vx: i16,
     vy: i16,
+    draw_color: u8,
 
     const width = 3;
     const height = 3;
     const accel = 30;
 
-    pub fn create(x: u16, y: u16) Player {
-        return Player{ .x = x, .y = y, .vx = 0, .vy = 0 };
+    pub fn create(x: u16, y: u16, draw_color: u8) Player {
+        return Player{ .x = x, .y = y, .vx = 0, .vy = 0, .draw_color = draw_color };
     }
 
     pub fn update(self: *Player, level: *MainLevel) void {
@@ -175,7 +176,7 @@ const Player = struct {
     }
 
     fn draw(self: Player) void {
-        platform.DRAW_COLORS.* = 3;
+        platform.DRAW_COLORS.* = self.draw_color;
         platform.rect(self.x >> 8, self.y >> 8, Player.width, Player.height);
     }
 };
