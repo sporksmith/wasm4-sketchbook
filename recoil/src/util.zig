@@ -153,3 +153,13 @@ pub fn add_velocity(pos: u16, vel: i16) u16 {
 pub fn abs(x: anytype) @TypeOf(x) {
     return if (x >= 0) x else -x;
 }
+
+pub fn get_pixel(x: u8, y: u8) u8 {
+    const pixel_idx = @intCast(usize, y) * platform.CANVAS_SIZE + @intCast(usize, x);
+    const byte_idx = pixel_idx / 4; // 4 pixels per byte
+    const shift = @intCast(u3, pixel_idx & 0b11) * 2;
+    const byte = platform.FRAMEBUFFER[byte_idx];
+    const rv = byte & 0b11;
+    std.log.debug("get_pixel x:{} y:{} pixel_idx:{} byte_idx:{} shift:{} byte:{} rv:{}", .{ x, y, pixel_idx, byte_idx, shift, byte, rv });
+    return rv;
+}

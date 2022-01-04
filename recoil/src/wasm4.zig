@@ -115,4 +115,4 @@ pub extern fn diskw(src: [*]const u8, size: u32) u32;
 
 /// Prints a message to the debug console.
 pub extern fn trace(x: [*:0]const u8) void;
-pub extern fn tracef(x: [*:0]const u8, args: [*]const u8) void;
+pub extern fn tracef(x: [*:0]const u8, ...) void;

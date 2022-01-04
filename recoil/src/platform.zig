@@ -35,6 +35,12 @@ pub const MOUSE_LEFT = w4.MOUSE_LEFT;
 pub const MOUSE_RIGHT = w4.MOUSE_RIGHT;
 pub const MOUSE_MIDDLE = w4.MOUSE_MIDDLE;
 
+var _SYSTEM_FLAGS: u8 = undefined;
+pub const SYSTEM_FLAGS: *u8 = if (tag == .freestanding) w4.SYSTEM_FLAGS else &_SYSTEM_FLAGS;
+
+pub const SYSTEM_PRESERVE_FRAMEBUFFER = w4.SYSTEM_PRESERVE_FRAMEBUFFER;
+pub const SYSTEM_HIDE_GAMEPAD_OVERLAY = w4.SYSTEM_HIDE_GAMEPAD_OVERLAY;
+
 fn _trace(x: [*:0]const u8) void {
     slog.debug("{s}\n", .{x});
 }

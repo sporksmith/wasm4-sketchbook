@@ -1,9 +1,12 @@
+const std = @import("std");
 const platform = @import("platform.zig");
 const main = @import("main.zig");
 const util = @import("util.zig");
 
 const abs = util.abs;
 const add_velocity = util.add_velocity;
+
+const slog = std.log.scoped(.main_level);
 
 pub const MainLevel = struct {
     const n_players = 2;
@@ -17,9 +20,15 @@ pub const MainLevel = struct {
         self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, platform.GAMEPAD2, &self.bullets[1]);
 
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
+        //platform.SYSTEM_FLAGS.* |= platform.SYSTEM_PRESERVE_FRAMEBUFFER;
     }
 
     pub fn update(self: *MainLevel) ?main.LevelId {
+        // clear
+        //platform.DRAW_COLORS.* = 1;
+        //platform.rect(0, 0, platform.CANVAS_SIZE, platform.CANVAS_SIZE);
+        //platform.rect(, platform.CANVAS_SIZE, platform.CANVAS_SIZE);
+
         for (self.players) |*p| {
             p.update();
         }
@@ -28,7 +37,14 @@ pub const MainLevel = struct {
         }
 
         for (self.bullets) |*b| {
-            b.update_and_draw();
+            if (b.live)
+                b.update_and_draw();
+        }
+
+        for (self.players) |p| {
+            if (p.check_collisions()) {
+                //platform.tone(500, (16 << 24) | 38, 15, platform.TONE_TRIANGLE);
+            }
         }
 
         return null;
@@ -56,6 +72,26 @@ const Player = struct {
     const width = 3;
     const height = 3;
     const accel = 30;
+
+    pub fn check_collisions(self: Player) bool {
+        const startx = @intCast(u8, self.x >> 8);
+        const starty = @intCast(u8, self.y >> 8);
+        var x = startx;
+        var y = starty;
+        // Hanging out at the right and bottom edges gives a
+        // smaller hit box. Bug or feature?
+        while (x < (startx + Player.width) and x < platform.CANVAS_SIZE) : (x += 1) {
+            while (y < (starty + Player.height) and y < platform.CANVAS_SIZE) : (y += 1) {
+                const fb_color = util.get_pixel(x, y);
+                slog.debug("pixel-color:{} draw-color:{}", .{ fb_color, self.draw_color });
+                if (fb_color != 0 and fb_color != self.draw_color) {
+                    slog.debug("collision!", .{});
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     pub fn create(x: u16, y: u16, draw_color: u8, gamepad: *const u8, bullets: *Particles(10)) Player {
         bullets.live = false;
@@ -126,6 +162,14 @@ const Player = struct {
     }
 };
 
+test "fire" {
+    // Regression test for overflow
+    var bullets: Particles(10) = undefined;
+    const middle = (platform.CANVAS_SIZE / 2) << 8;
+    var player = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, platform.GAMEPAD1, &bullets);
+    player.fire(.LEFT);
+}
+
 fn Particles(comptime n: u32) type {
     return struct {
         const Self = @This();
@@ -141,14 +185,18 @@ fn Particles(comptime n: u32) type {
         pub fn init_xs(self: *Self, x: u16, rand_min: i16, rand_most: i16) void {
             var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                self.xs[i] = x + @bitCast(u16, main.rnd.random().intRangeAtMost(i16, rand_min, rand_most));
+                const err = main.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
+                // XXX: rename
+                self.xs[i] = util.add_velocity(x, err);
             }
         }
 
         pub fn init_ys(self: *Self, y: u16, rand_min: i16, rand_most: i16) void {
             var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                self.ys[i] = y + @bitCast(u16, main.rnd.random().intRangeAtMost(i16, rand_min, rand_most));
+                const err = main.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
+                // XXX: rename
+                self.ys[i] = util.add_velocity(y, err);
             }
         }
 
