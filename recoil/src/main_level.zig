@@ -36,6 +36,13 @@ pub const MainLevel = struct {
     }
 };
 
+const Direction = enum {
+    LEFT,
+    RIGHT,
+    UP,
+    DOWN,
+};
+
 const Player = struct {
     x: u16,
     y: u16,
@@ -53,128 +60,60 @@ const Player = struct {
         return Player{ .x = x, .y = y, .vx = 0, .vy = 0, .draw_color = draw_color, .gamepad = gamepad };
     }
 
+    fn fire(self: *Player, level: *MainLevel, direction: Direction) void {
+        const bullet_velocity = 1000;
+        const bullet_spread = 20;
+        const recoil = 1 << 8;
+        const bullet_x = self.x + ((Player.width / 2) << 8);
+        const bullet_y = self.y + ((Player.height / 2) << 8);
+        level.bullets.live = true;
+        level.bullets.init_xs(bullet_x, -bullet_spread, bullet_spread);
+        level.bullets.init_ys(bullet_y, -bullet_spread, bullet_spread);
+
+        var bullet_vx = self.vx;
+        var bullet_vy = self.vy;
+        switch (direction) {
+            .LEFT => {
+                bullet_vx -= bullet_velocity;
+                self.vx += recoil;
+            },
+            .RIGHT => {
+                bullet_vx += bullet_velocity;
+                self.vx -= recoil;
+            },
+            .UP => {
+                bullet_vy -= bullet_velocity;
+                self.vy += recoil;
+            },
+            .DOWN => {
+                bullet_vy += bullet_velocity;
+                self.vy -= recoil;
+            },
+        }
+        level.bullets.init_vxs(bullet_vx, -bullet_spread, bullet_spread);
+        level.bullets.init_vys(bullet_vy, -bullet_spread, bullet_spread);
+
+        platform.tone(370 | (160 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
+    }
+
     pub fn update(self: *Player, level: *MainLevel) void {
         const gamepad = self.gamepad.*;
-        if (gamepad & platform.BUTTON_1 != 0) {
-            // Directions fire on tap.
-            const just_pressed = gamepad & (gamepad ^ main.prev_gamepad);
-            const bullet_velocity = 1000;
-            const bullet_spread = 20;
-            const recoil = 1 << 8;
-            const bullet_x = self.x + ((Player.width / 2) << 8);
-            const bullet_y = self.y + ((Player.height / 2) << 8);
-            if (just_pressed & platform.BUTTON_LEFT != 0) {
-                level.bullets.live = true;
-                level.bullets.init_xs(bullet_x, -bullet_spread, bullet_spread);
-                level.bullets.init_ys(bullet_y, -bullet_spread, bullet_spread);
-                level.bullets.init_vxs(self.vx - bullet_velocity, -bullet_spread, bullet_spread);
-                level.bullets.init_vys(self.vy, -bullet_spread, bullet_spread);
-                self.vx += recoil;
-                fire_sound();
-            }
-            if (just_pressed & platform.BUTTON_RIGHT != 0) {
-                level.bullets.live = true;
-                level.bullets.init_xs(bullet_x, -bullet_spread, bullet_spread);
-                level.bullets.init_ys(bullet_y, -bullet_spread, bullet_spread);
-                level.bullets.init_vxs(self.vx + bullet_velocity, -bullet_spread, bullet_spread);
-                level.bullets.init_vys(self.vy, -bullet_spread, bullet_spread);
-                self.vx -= recoil;
-                fire_sound();
-            }
-            if (just_pressed & platform.BUTTON_DOWN != 0) {
-                level.bullets.live = true;
-                level.bullets.init_xs(bullet_x, -bullet_spread, bullet_spread);
-                level.bullets.init_ys(bullet_y, -bullet_spread, bullet_spread);
-                level.bullets.init_vxs(self.vx, -bullet_spread, bullet_spread);
-                level.bullets.init_vys(self.vy + bullet_velocity, -bullet_spread, bullet_spread);
-                self.vy -= recoil;
-                fire_sound();
-            }
-            if (just_pressed & platform.BUTTON_UP != 0) {
-                level.bullets.live = true;
-                level.bullets.init_xs(bullet_x, -bullet_spread, bullet_spread);
-                level.bullets.init_ys(bullet_y, -bullet_spread, bullet_spread);
-                level.bullets.init_vxs(self.vx, -bullet_spread, bullet_spread);
-                level.bullets.init_vys(self.vy - bullet_velocity, -bullet_spread, bullet_spread);
-                self.vy += recoil;
-                fire_sound();
-            }
-        } else if (gamepad & platform.BUTTON_2 != 0) {
-            // Brake
-            if (self.vx != 0 or self.vy != 0) {
-                platform.tone(550, 2, 15, platform.TONE_NOISE);
-            }
+        const just_pressed = gamepad & (gamepad ^ self.prev_gamepad);
 
-            const brake_power: i16 = 8;
-            if (abs(self.vx) < brake_power) {
-                self.vx = 0;
-            } else if (self.vx < 0) {
-                self.vx += brake_power;
-            } else {
-                self.vx -= brake_power;
-            }
-            if (abs(self.vy) < brake_power) {
-                self.vy = 0;
-            } else if (self.vy < 0) {
-                self.vy += brake_power;
-            } else {
-                self.vy -= brake_power;
-            }
-        } else {
-            // Directions accelerate continuously.
-            if (gamepad & platform.BUTTON_LEFT != 0) {
-                self.vx = self.vx - accel;
-            } else if (gamepad & platform.BUTTON_RIGHT != 0) {
-                self.vx = self.vx + accel;
-            } else {
-                // FIXME: this is way too fast to be noticeable
-                //self.vx = @divTrunc(self.vx, 2);
-            }
-
-            if (gamepad & platform.BUTTON_UP != 0) {
-                self.vy = self.vy - accel;
-            } else if (gamepad & platform.BUTTON_DOWN != 0) {
-                self.vy = self.vy + accel;
-            } else {
-                //self.vy = @divTrunc(self.vy, 2);
-            }
+        if (just_pressed & platform.BUTTON_LEFT != 0) {
+            self.fire(level, .LEFT);
         }
-
+        if (just_pressed & platform.BUTTON_RIGHT != 0) {
+            self.fire(level, .RIGHT);
+        }
+        if (just_pressed & platform.BUTTON_UP != 0) {
+            self.fire(level, .UP);
+        }
+        if (just_pressed & platform.BUTTON_DOWN != 0) {
+            self.fire(level, .DOWN);
+        }
         self.x = add_velocity(self.x, self.vx);
         self.y = add_velocity(self.y, self.vy);
-
-        // Shoot left or right with button 1 and button 2.
-        // Ok-ish, but was hoping for 4 direction firing.
-        if (false) {
-            if (gamepad & platform.BUTTON_1 != 0) {
-                level.bullets.live = true;
-                level.bullets.init_xs(self.x + ((Player.width / 2) << 8), -10, 10);
-                level.bullets.init_ys(self.y + ((Player.height / 2) << 8), -10, 10);
-                level.bullets.init_vxs(self.vx - 1000, -10, 10);
-                level.bullets.init_vys(self.vy, -10, 10);
-            }
-
-            if (gamepad & platform.BUTTON_2 != 0) {
-                level.bullets.live = true;
-                level.bullets.init_xs(self.x + ((Player.width / 2) << 8), -100, 100);
-                level.bullets.init_ys(self.y + ((Player.height / 2) << 8), -100, 100);
-                level.bullets.init_vxs(self.vx + 1000, -10, 10);
-                level.bullets.init_vys(self.vy, -10, 10);
-            }
-        }
-
-        // Shoot with mouse. Kind of interesting, but awkward.
-        if (false) {
-            if (platform.MOUSE_BUTTONS.* & platform.MOUSE_LEFT != 0) {
-                level.bullets.live = true;
-                level.bullets.init_xs(self.x + ((Player.width / 2) << 8), -100, 100);
-                level.bullets.init_ys(self.y + ((Player.height / 2) << 8), -100, 100);
-                const mouse_x = @intCast(i16, platform.MOUSE_X.*) << 8;
-                const mouse_y = @intCast(i16, platform.MOUSE_Y.*) << 8;
-                level.bullets.init_vxs(self.vx + @divTrunc(mouse_x - @intCast(i16, self.x), 32), -10, 10);
-                level.bullets.init_vys(self.vy + @divTrunc(mouse_y - @intCast(i16, self.y), 32), -10, 10);
-            }
-        }
         self.prev_gamepad = gamepad;
     }
 
@@ -244,8 +183,4 @@ fn Particles(comptime n: u32) type {
             }
         }
     };
-}
-
-fn fire_sound() void {
-    platform.tone(370 | (160 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
 }
