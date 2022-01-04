@@ -6,14 +6,15 @@ const abs = util.abs;
 const add_velocity = util.add_velocity;
 
 pub const MainLevel = struct {
-    const n_players = 1;
+    const n_players = 2;
 
     players: [n_players]Player,
     bullets: Particles(10),
 
     pub fn init(self: *MainLevel) void {
         const middle = (platform.CANVAS_SIZE / 2) << 8;
-        self.players[0] = Player.create(middle, middle, 3, platform.GAMEPAD1);
+        self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, platform.GAMEPAD1);
+        self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 4, platform.GAMEPAD2);
 
         self.bullets.live = false;
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
