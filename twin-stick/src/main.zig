@@ -112,8 +112,21 @@ const Player = struct {
             }
         } else if (gamepad & platform.BUTTON_2 != 0) {
             // Brake
-            self.vx = @divTrunc(self.vx, 2);
-            self.vy = @divTrunc(self.vx, 2);
+            const brake_power: i16 = 8;
+            if (abs(self.vx) < brake_power) {
+                self.vx = 0;
+            } else if (self.vx < 0) {
+                self.vx += brake_power;
+            } else {
+                self.vx -= brake_power;
+            }
+            if (abs(self.vy) < brake_power) {
+                self.vy = 0;
+            } else if (self.vy < 0) {
+                self.vy += brake_power;
+            } else {
+                self.vy -= brake_power;
+            }
         } else {
             // Directions accelerate continuously.
             if (gamepad & platform.BUTTON_LEFT != 0) {
