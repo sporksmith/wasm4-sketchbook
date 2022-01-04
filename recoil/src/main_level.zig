@@ -12,9 +12,9 @@ pub const MainLevel = struct {
     bullets: Particles(10),
 
     pub fn init(self: *MainLevel) void {
-        for (self.players) |*p| {
-            p.* = Player.create();
-        }
+        const middle = (platform.CANVAS_SIZE / 2) << 8;
+        self.players[0] = Player.create(middle, middle);
+
         self.bullets.live = false;
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
     }
@@ -45,9 +45,8 @@ const Player = struct {
     const height = 3;
     const accel = 30;
 
-    pub fn create() Player {
-        const middle = (platform.CANVAS_SIZE / 2) << 8;
-        return Player{ .x = middle, .y = middle, .vx = 0, .vy = 0 };
+    pub fn create(x: u16, y: u16) Player {
+        return Player{ .x = x, .y = y, .vx = 0, .vy = 0 };
     }
 
     pub fn update(self: *Player, level: *MainLevel) void {
