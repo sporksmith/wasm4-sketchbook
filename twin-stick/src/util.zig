@@ -141,3 +141,15 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) nore
     // returns control to the wasm engine with some kind of error.
     std.builtin.default_panic(msg, error_return_trace);
 }
+
+pub fn add_velocity(pos: u16, vel: i16) u16 {
+    const pos32 = @as(i32, pos);
+    const vel32 = @as(i32, vel);
+    const sum = pos32 + vel32;
+    const max = @as(i32, platform.CANVAS_SIZE) << 8;
+    return @intCast(u16, if (sum > 0) @mod(sum, max) else max + sum);
+}
+
+pub fn abs(x: anytype) @TypeOf(x) {
+    return if (x >= 0) x else -x;
+}
