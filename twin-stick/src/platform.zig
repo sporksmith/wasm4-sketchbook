@@ -60,6 +60,11 @@ fn _tone(frequency: u32, duration: u32, volume: u32, flags: u32) void {
 }
 pub const tone = if (tag == .freestanding) w4.tone else _tone;
 
+fn _text(str: [*:0]const u8, x: i32, y: i32) void {
+    slog.debug("text(str:{s} x:{} y:{}", .{ str, x, y });
+}
+pub const text = if (tag == .freestanding) w4.text else _text;
+
 pub const TONE_PULSE1 = w4.TONE_PULSE1;
 pub const TONE_PULSE2 = w4.TONE_PULSE2;
 pub const TONE_TRIANGLE = w4.TONE_TRIANGLE;

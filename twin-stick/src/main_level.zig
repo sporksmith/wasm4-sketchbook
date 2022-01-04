@@ -15,13 +15,15 @@ pub const MainLevel = struct {
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
     }
 
-    pub fn update(self: *MainLevel) void {
+    pub fn update(self: *MainLevel) ?main.LevelId {
         self.player.update(self);
         self.player.draw();
 
         if (self.bullets.live) {
             self.bullets.update_and_draw();
         }
+
+        return null;
     }
 };
 
@@ -163,8 +165,6 @@ const Player = struct {
                 level.bullets.init_vys(self.vy + @divTrunc(mouse_y - @intCast(i16, self.y), 32), -10, 10);
             }
         }
-
-        main.prev_gamepad = gamepad;
     }
 
     fn draw(self: Player) void {
