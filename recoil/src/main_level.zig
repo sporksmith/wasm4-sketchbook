@@ -6,18 +6,26 @@ const abs = util.abs;
 const add_velocity = util.add_velocity;
 
 pub const MainLevel = struct {
-    player: Player,
+    const n_players = 1;
+
+    players: [n_players]Player,
     bullets: Particles(10),
 
     pub fn init(self: *MainLevel) void {
-        self.player = Player.create();
+        for (self.players) |*p| {
+            p.* = Player.create();
+        }
         self.bullets.live = false;
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
     }
 
     pub fn update(self: *MainLevel) ?main.LevelId {
-        self.player.update(self);
-        self.player.draw();
+        for (self.players) |*p| {
+            p.update(self);
+        }
+        for (self.players) |p| {
+            p.draw();
+        }
 
         if (self.bullets.live) {
             self.bullets.update_and_draw();
