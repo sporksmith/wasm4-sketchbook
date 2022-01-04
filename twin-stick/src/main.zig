@@ -136,6 +136,10 @@ const Player = struct {
             }
         } else if (gamepad & platform.BUTTON_2 != 0) {
             // Brake
+            if (self.vx != 0 or self.vy != 0) {
+                platform.tone(550, 2, 15, platform.TONE_NOISE);
+            }
+
             const brake_power: i16 = 8;
             if (abs(self.vx) < brake_power) {
                 self.vx = 0;
