@@ -43,7 +43,7 @@ pub const MainLevel = struct {
 
         for (self.players) |p| {
             if (p.check_collisions()) {
-                //platform.tone(500, (16 << 24) | 38, 15, platform.TONE_TRIANGLE);
+                platform.tone(500, (16 << 24) | 38, 15, platform.TONE_TRIANGLE);
             }
         }
 
@@ -83,9 +83,9 @@ const Player = struct {
         while (x < (startx + Player.width) and x < platform.CANVAS_SIZE) : (x += 1) {
             while (y < (starty + Player.height) and y < platform.CANVAS_SIZE) : (y += 1) {
                 const fb_color = util.get_pixel(x, y);
-                slog.debug("pixel-color:{} draw-color:{}", .{ fb_color, self.draw_color });
-                if (fb_color != 0 and fb_color != self.draw_color) {
-                    slog.debug("collision!", .{});
+                // Background is color 1. Check for any color other than self or bg.
+                if (fb_color != 1 and fb_color != self.draw_color) {
+                    slog.debug("collision pixel-color:{} draw-color:{}", .{ fb_color, self.draw_color });
                     return true;
                 }
             }

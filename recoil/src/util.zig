@@ -159,7 +159,7 @@ pub fn get_pixel(x: u8, y: u8) u8 {
     const byte_idx = pixel_idx / 4; // 4 pixels per byte
     const shift = @intCast(u3, pixel_idx & 0b11) * 2;
     const byte = platform.FRAMEBUFFER[byte_idx];
-    const rv = byte & 0b11;
-    std.log.debug("get_pixel x:{} y:{} pixel_idx:{} byte_idx:{} shift:{} byte:{} rv:{}", .{ x, y, pixel_idx, byte_idx, shift, byte, rv });
+    const rv = ((byte >> shift) & 0b11) + 1;
+    //std.log.debug("get_pixel x:{} y:{} pixel_idx:{} byte_idx:{} shift:{} byte:{} rv:{}", .{ x, y, pixel_idx, byte_idx, shift, byte, rv });
     return rv;
 }
