@@ -54,3 +54,17 @@ fn _line(x1: i32, y1: i32, x2: i32, y2: i32) void {
     slog.debug("line(x1:{} y1:{} x2:{} y2:{}", .{ x1, y1, x2, y2 });
 }
 pub const line = if (tag == .freestanding) w4.line else _line;
+
+fn _tone(frequency: u32, duration: u32, volume: u32, flags: u32) void {
+    slog.debug("tone(frequency:{} duration:{} volume:{} flags:{}", .{ frequency, duration, volume, flags });
+}
+pub const tone = if (tag == .freestanding) w4.tone else _tone;
+
+pub const TONE_PULSE1 = w4.TONE_PULSE1;
+pub const TONE_PULSE2 = w4.TONE_PULSE2;
+pub const TONE_TRIANGLE = w4.TONE_TRIANGLE;
+pub const TONE_NOISE = w4.TONE_NOISE;
+pub const TONE_MODE1 = w4.TONE_MODE1;
+pub const TONE_MODE2 = w4.TONE_MODE2;
+pub const TONE_MODE3 = w4.TONE_MODE3;
+pub const TONE_MODE4 = w4.TONE_MODE4;

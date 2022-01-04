@@ -52,6 +52,22 @@ fn abs(x: anytype) @TypeOf(x) {
     return if (x >= 0) x else -x;
 }
 
+// From https://wasm4.org/docs/guides/basic-drawing?code-lang=zig#no-scroll
+fn pixel(x: i32, y: i32) void {
+    // The byte index into the framebuffer that contains (x, y)
+    const idx = (@intCast(usize, y) * 160 + @intCast(usize, x)) >> 2;
+
+    // Calculate the bits within the byte that corresponds to our position
+    const shift = @intCast(u3, (x & 0b11) * 2);
+    const mask = @as(u8, 0b11) << shift;
+
+    // Use the first DRAW_COLOR as the pixel color
+    const color = @intCast(u8, platform.DRAW_COLORS.* & 0b11);
+
+    // Write to the framebuffer
+    platform.FRAMEBUFFER[idx] = (color << shift) | (platform.FRAMEBUFFER[idx] & ~mask);
+}
+
 const Player = struct {
     x: u16,
     y: u16,
@@ -85,6 +101,7 @@ const Player = struct {
                 bullets.init_vxs(self.vx - bullet_velocity, -bullet_spread, bullet_spread);
                 bullets.init_vys(self.vy, -bullet_spread, bullet_spread);
                 self.vx += recoil;
+                platform.tone(150 | (80 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
             }
             if (just_pressed & platform.BUTTON_RIGHT != 0) {
                 bullets.live = true;
@@ -93,6 +110,7 @@ const Player = struct {
                 bullets.init_vxs(self.vx + bullet_velocity, -bullet_spread, bullet_spread);
                 bullets.init_vys(self.vy, -bullet_spread, bullet_spread);
                 self.vx -= recoil;
+                platform.tone(150 | (80 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
             }
             if (just_pressed & platform.BUTTON_DOWN != 0) {
                 bullets.live = true;
@@ -101,6 +119,7 @@ const Player = struct {
                 bullets.init_vxs(self.vx, -bullet_spread, bullet_spread);
                 bullets.init_vys(self.vy + bullet_velocity, -bullet_spread, bullet_spread);
                 self.vy -= recoil;
+                platform.tone(150 | (80 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
             }
             if (just_pressed & platform.BUTTON_UP != 0) {
                 bullets.live = true;
@@ -109,6 +128,7 @@ const Player = struct {
                 bullets.init_vxs(self.vx, -bullet_spread, bullet_spread);
                 bullets.init_vys(self.vy - bullet_velocity, -bullet_spread, bullet_spread);
                 self.vy += recoil;
+                platform.tone(150 | (80 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
             }
         } else if (gamepad & platform.BUTTON_2 != 0) {
             // Brake
