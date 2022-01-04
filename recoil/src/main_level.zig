@@ -61,7 +61,7 @@ const Player = struct {
     }
 
     fn fire(self: *Player, level: *MainLevel, direction: Direction) void {
-        const bullet_velocity = 1000;
+        const bullet_velocity = 500;
         const bullet_spread = 20;
         const recoil = 1 << 8;
         const bullet_x = self.x + ((Player.width / 2) << 8);
