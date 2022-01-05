@@ -9,7 +9,7 @@ const slog = std.log.scoped(.main);
 
 // TODO: seed
 pub var rnd = std.rand.DefaultPrng.init(0);
-pub var frame_count: u64 = undefined;
+pub var frame_count: u32 = undefined;
 
 // Override default panic handler.
 pub const panic = util.panic;

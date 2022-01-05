@@ -19,6 +19,8 @@ pub const MainLevel = struct {
     bullets: [n_players][bullets_per_player]?Bullets,
     explosions: [n_players]?Explosion,
 
+    first_stayalive_frame: ?u32,
+
     pub fn init(self: *MainLevel) void {
         const middle = (platform.CANVAS_SIZE / 2) << 8;
         self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, platform.GAMEPAD1, &self.bullets[0]);
@@ -52,13 +54,32 @@ pub const MainLevel = struct {
 
         // Collision checking reads the frame buffer - must be *after* we draw
         // collidables!
+        var live_player_count: u8 = 0;
         for (self.players) |*mp, i| {
             if (mp.*) |*p| {
                 if (p.check_collisions()) {
                     platform.tone(500, (16 << 24) | 38, 15, platform.TONE_TRIANGLE);
-                    self.explosions[i] = Explosion.create(.{ .x = p.x, .y = p.y, .vx = p.vx, .vy = p.vy, .spread = 0x100, .draw_color = p.draw_color });
+                    self.explosions[i] = Explosion.create(.{ .x = p.x, .y = p.y, .vx = p.vx, .vy = p.vy, .spread = 0x20, .draw_color = p.draw_color });
                     mp.* = null;
+                } else {
+                    live_player_count += 1;
                 }
+            }
+        }
+
+        // Is only 1 player alive?
+        if (live_player_count == 1) {
+            if (self.first_stayalive_frame) |_| {} else {
+                self.first_stayalive_frame = main.frame_count;
+            }
+            const first_stayalive_frame = self.first_stayalive_frame orelse unreachable;
+            const stayalive_frames_elapsed = main.frame_count - first_stayalive_frame;
+            const stayalive_frames_remaining = 3 * platform.TARGET_FPS - @bitCast(i32, stayalive_frames_elapsed);
+            if (stayalive_frames_remaining > 0 and stayalive_frames_elapsed > 0) {
+                const seconds_remaining = @divTrunc(stayalive_frames_remaining, platform.TARGET_FPS) + 1;
+                var buf: [20:0]u8 = undefined;
+                _ = std.fmt.bufPrint(&buf, "Stay Alive! {}\x00", .{seconds_remaining}) catch unreachable;
+                platform.text(&buf, 20, 80);
             }
         }
 
