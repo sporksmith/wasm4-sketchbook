@@ -9,17 +9,20 @@ const add_velocity = util.add_velocity;
 const slog = std.log.scoped(.main_level);
 
 const Bullets = Particles(10);
+const Explosion = Particles(100);
 
 pub const MainLevel = struct {
     const n_players = 2;
 
     players: [n_players]?Player,
     bullets: [n_players]?Bullets,
+    explosions: [n_players]?Explosion,
 
     pub fn init(self: *MainLevel) void {
         const middle = (platform.CANVAS_SIZE / 2) << 8;
         self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, platform.GAMEPAD1, &self.bullets[0]);
         self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, platform.GAMEPAD2, &self.bullets[1]);
+        self.explosions = .{null} ** @typeInfo(@TypeOf(self.explosions)).Array.len;
 
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
     }
@@ -38,12 +41,20 @@ pub const MainLevel = struct {
             }
         }
 
+        for (self.explosions) |*me| {
+            if (me.*) |*e| {
+                e.update_and_draw();
+            }
+        }
+
         // Collision checking reads the frame buffer - must be *after* we draw
         // collidables!
-        for (self.players) |*mp| {
+        for (self.players) |*mp, i| {
             if (mp.*) |*p| {
                 if (p.check_collisions()) {
                     platform.tone(500, (16 << 24) | 38, 15, platform.TONE_TRIANGLE);
+                    self.explosions[i] = Explosion.create(.{ .x = p.x, .y = p.y, .vx = p.vx, .vy = p.vy, .spread = 0x100, .draw_color = p.draw_color });
+                    mp.* = null;
                 }
             }
         }
