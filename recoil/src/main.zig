@@ -5,6 +5,8 @@ const std = @import("std");
 const MainLevel = @import("main_level.zig").MainLevel;
 const SplashLevel = @import("splash_level.zig").SplashLevel;
 
+const slog = std.log.scoped(.main);
+
 // TODO: seed
 pub var rnd = std.rand.DefaultPrng.init(0);
 pub var frame_count: u64 = undefined;
@@ -61,7 +63,7 @@ export fn update() void {
     frame_count += 1;
 
     if (level.update()) |next| {
-        platform.trace("Switching level");
+        slog.debug("Switching level", .{});
         rnd = std.rand.DefaultPrng.init(frame_count);
         level.init(next);
     }
