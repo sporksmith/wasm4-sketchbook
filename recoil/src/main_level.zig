@@ -13,7 +13,7 @@ const Explosion = Particles(100);
 
 pub const MainLevel = struct {
     const n_players = 2;
-    const bullets_per_player = 2;
+    const bullets_per_player = 3;
 
     players: [n_players]?Player,
     bullets: [n_players][bullets_per_player]?Bullets,
