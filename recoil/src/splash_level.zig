@@ -4,8 +4,11 @@ const main = @import("main.zig");
 pub const SplashLevel = struct {
     const Self = @This();
 
+    p1_ready: bool = false,
+    p2_ready: bool = false,
+
     pub fn init(self: *Self) void {
-        _ = self;
+        self.* = Self{ .p1_ready = false, .p2_ready = false };
     }
 
     pub fn update(self: *Self) ?main.LevelId {
@@ -13,26 +16,42 @@ pub const SplashLevel = struct {
 
         var y: i32 = 0;
         const lines = .{
-            "Controls:", //
+            "Gamepad 1:", //
+            "Arrow Keys", //
             "\n", //
-            "Arrow   : accelerate", //
-            "Hold X", //
-            " + Arrow: fire", //
-            "Z       : brake", //
+            "Gamepad 2:", //
+            "ESDF", //
             "\n", //
-            "WIP: Not much to", //
-            "do here yet!", //
-            "\n",
-            "X to begin",
+            "Ready: Up",
         };
         inline for (lines) |s| {
             platform.text(s, 0, y);
             y += 10;
         }
 
-        if (platform.GAMEPAD1.* & platform.BUTTON_1 != 0) {
+        if ((platform.GAMEPAD1.* & platform.BUTTON_UP) != 0) {
+            self.p1_ready = true;
+        }
+        if ((platform.GAMEPAD2.* & platform.BUTTON_UP) != 0) {
+            self.p2_ready = true;
+        }
+
+        if (!self.p1_ready) {
+            platform.text("P1: Waiting...", 0, 100);
+        } else {
+            platform.text("P1: Ready!", 0, 100);
+        }
+
+        if (!self.p2_ready) {
+            platform.text("P2: Waiting...", 0, 110);
+        } else {
+            platform.text("P2: Ready!", 0, 110);
+        }
+
+        if (self.p1_ready and self.p2_ready) {
             return .main_level;
         }
+
         return null;
     }
 };
