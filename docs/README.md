@@ -9,3 +9,6 @@ Just some noodling with [wasm4](https://wasm4.org/).
   * direction: Accelerate.
   * button1 + direction: Fire some bullets, with recoil.
   * button2: Brake.
+
+* [Recoil](https://sporksmith.github.io/wasm4-sketchbook/recoil/) or THE FUTILITY OF WAR.
+  2 player shotgun fight in space.
