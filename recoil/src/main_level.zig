@@ -8,11 +8,13 @@ const add_velocity = util.add_velocity;
 
 const slog = std.log.scoped(.main_level);
 
+const Bullets = Particles(10);
+
 pub const MainLevel = struct {
     const n_players = 2;
 
-    players: [n_players]Player,
-    bullets: [n_players]Particles(10),
+    players: [n_players]?Player,
+    bullets: [n_players]?Bullets,
 
     pub fn init(self: *MainLevel) void {
         const middle = (platform.CANVAS_SIZE / 2) << 8;
@@ -20,30 +22,29 @@ pub const MainLevel = struct {
         self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, platform.GAMEPAD2, &self.bullets[1]);
 
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
-        //platform.SYSTEM_FLAGS.* |= platform.SYSTEM_PRESERVE_FRAMEBUFFER;
     }
 
     pub fn update(self: *MainLevel) ?main.LevelId {
-        // clear
-        //platform.DRAW_COLORS.* = 1;
-        //platform.rect(0, 0, platform.CANVAS_SIZE, platform.CANVAS_SIZE);
-        //platform.rect(, platform.CANVAS_SIZE, platform.CANVAS_SIZE);
-
-        for (self.players) |*p| {
-            p.update();
-        }
-        for (self.players) |p| {
-            p.draw();
+        for (self.players) |*mp| {
+            if (mp.*) |*p| {
+                p.update();
+                p.draw();
+            }
         }
 
-        for (self.bullets) |*b| {
-            if (b.live)
+        for (self.bullets) |*mb| {
+            if (mb.*) |*b| {
                 b.update_and_draw();
+            }
         }
 
-        for (self.players) |p| {
-            if (p.check_collisions()) {
-                platform.tone(500, (16 << 24) | 38, 15, platform.TONE_TRIANGLE);
+        // Collision checking reads the frame buffer - must be *after* we draw
+        // collidables!
+        for (self.players) |*mp| {
+            if (mp.*) |*p| {
+                if (p.check_collisions()) {
+                    platform.tone(500, (16 << 24) | 38, 15, platform.TONE_TRIANGLE);
+                }
             }
         }
 
@@ -65,7 +66,7 @@ const Player = struct {
     vy: i16,
     draw_color: u8,
     gamepad: *const u8,
-    bullets: *Particles(10),
+    bullets: *?Bullets,
 
     prev_gamepad: u8 = 0,
 
@@ -93,9 +94,7 @@ const Player = struct {
         return false;
     }
 
-    pub fn create(x: u16, y: u16, draw_color: u8, gamepad: *const u8, bullets: *Particles(10)) Player {
-        bullets.live = false;
-        bullets.draw_color = draw_color;
+    pub fn create(x: u16, y: u16, draw_color: u8, gamepad: *const u8, bullets: *?Bullets) Player {
         return Player{ .x = x, .y = y, .vx = 0, .vy = 0, .draw_color = draw_color, .gamepad = gamepad, .bullets = bullets };
     }
 
@@ -103,12 +102,6 @@ const Player = struct {
         const bullet_velocity = 200;
         const bullet_spread = 20;
         const recoil = 1 << 6;
-        const bullet_x = self.x + ((Player.width / 2) << 8);
-        const bullet_y = self.y + ((Player.height / 2) << 8);
-        self.bullets.live = true;
-        self.bullets.init_xs(bullet_x, -bullet_spread, bullet_spread);
-        self.bullets.init_ys(bullet_y, -bullet_spread, bullet_spread);
-
         var bullet_vx = self.vx;
         var bullet_vy = self.vy;
         switch (direction) {
@@ -129,9 +122,9 @@ const Player = struct {
                 self.vy -= recoil;
             },
         }
-        self.bullets.init_vxs(bullet_vx, -bullet_spread, bullet_spread);
-        self.bullets.init_vys(bullet_vy, -bullet_spread, bullet_spread);
-
+        const bullet_x = self.x + ((Player.width / 2) << 8);
+        const bullet_y = self.y + ((Player.height / 2) << 8);
+        self.bullets.* = Bullets.create(.{ .x = bullet_x, .y = bullet_y, .vx = bullet_vx, .vy = bullet_vy, .spread = bullet_spread, .draw_color = self.draw_color });
         platform.tone(370 | (160 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
     }
 
@@ -164,11 +157,20 @@ const Player = struct {
 
 test "fire" {
     // Regression test for overflow
-    var bullets: Particles(10) = undefined;
+    var bullets: Bullets = undefined;
     const middle = (platform.CANVAS_SIZE / 2) << 8;
     var player = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, platform.GAMEPAD1, &bullets);
     player.fire(.LEFT);
 }
+
+const ParticleOptions = struct {
+    x: u16,
+    y: u16,
+    vx: i16,
+    vy: i16,
+    spread: u15,
+    draw_color: u8,
+};
 
 fn Particles(comptime n: u32) type {
     return struct {
@@ -179,8 +181,20 @@ fn Particles(comptime n: u32) type {
         ys: [n]u16,
         vxs: [n]i16,
         vys: [n]i16,
-        live: bool = false,
-        draw_color: u8 = 0,
+        draw_color: u8,
+
+        pub fn create(options: ParticleOptions) Self {
+            var p: Self = undefined;
+            const rand_most = @intCast(i16, options.spread);
+            const rand_min = -rand_most;
+            p.init_xs(options.x, rand_min, rand_most);
+            p.init_ys(options.y, rand_min, rand_most);
+            p.init_vxs(options.vx, rand_min, rand_most);
+            p.init_vys(options.vy, rand_min, rand_most);
+            p.draw_color = options.draw_color;
+
+            return p;
+        }
 
         pub fn init_xs(self: *Self, x: u16, rand_min: i16, rand_most: i16) void {
             var i: usize = 0;
