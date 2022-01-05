@@ -13,9 +13,10 @@ const Explosion = Particles(100);
 
 pub const MainLevel = struct {
     const n_players = 2;
+    const bullets_per_player = 2;
 
     players: [n_players]?Player,
-    bullets: [n_players]?Bullets,
+    bullets: [n_players][bullets_per_player]?Bullets,
     explosions: [n_players]?Explosion,
 
     pub fn init(self: *MainLevel) void {
@@ -35,9 +36,11 @@ pub const MainLevel = struct {
             }
         }
 
-        for (self.bullets) |*mb| {
-            if (mb.*) |*b| {
-                b.update_and_draw();
+        for (self.bullets) |*array| {
+            for (array.*) |*mb| {
+                if (mb.*) |*b| {
+                    b.update_and_draw();
+                }
             }
         }
 
@@ -77,7 +80,8 @@ const Player = struct {
     vy: i16,
     draw_color: u8,
     gamepad: *const u8,
-    bullets: *?Bullets,
+    bullets: *[MainLevel.bullets_per_player]?Bullets,
+    bulleti: usize = 0,
 
     prev_gamepad: u8 = 0,
 
@@ -105,7 +109,7 @@ const Player = struct {
         return false;
     }
 
-    pub fn create(x: u16, y: u16, draw_color: u8, gamepad: *const u8, bullets: *?Bullets) Player {
+    pub fn create(x: u16, y: u16, draw_color: u8, gamepad: *const u8, bullets: *[MainLevel.bullets_per_player]?Bullets) Player {
         return Player{ .x = x, .y = y, .vx = 0, .vy = 0, .draw_color = draw_color, .gamepad = gamepad, .bullets = bullets };
     }
 
@@ -135,7 +139,8 @@ const Player = struct {
         }
         const bullet_x = self.x + ((Player.width / 2) << 8);
         const bullet_y = self.y + ((Player.height / 2) << 8);
-        self.bullets.* = Bullets.create(.{ .x = bullet_x, .y = bullet_y, .vx = bullet_vx, .vy = bullet_vy, .spread = bullet_spread, .draw_color = self.draw_color });
+        self.bullets[self.bulleti] = Bullets.create(.{ .x = bullet_x, .y = bullet_y, .vx = bullet_vx, .vy = bullet_vy, .spread = bullet_spread, .draw_color = self.draw_color });
+        self.bulleti = (self.bulleti + 1) % @typeInfo(@TypeOf(self.bullets.*)).Array.len;
         platform.tone(370 | (160 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
     }
 
