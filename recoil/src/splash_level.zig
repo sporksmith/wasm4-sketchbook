@@ -21,8 +21,6 @@ pub const SplashLevel = struct {
             "\n", //
             "Gamepad 2:", //
             "ESDF", //
-            "\n", //
-            "Ready: Up",
         };
         inline for (lines) |s| {
             platform.text(s, 0, y);
@@ -37,13 +35,13 @@ pub const SplashLevel = struct {
         }
 
         if (!self.p1_ready) {
-            platform.text("P1: Waiting...", 0, 100);
+            platform.text("P1: Press \"up\"...", 0, 100);
         } else {
             platform.text("P1: Ready!", 0, 100);
         }
 
         if (!self.p2_ready) {
-            platform.text("P2: Waiting...", 0, 110);
+            platform.text("P2: Press \"up\"...", 0, 110);
         } else {
             platform.text("P2: Ready!", 0, 110);
         }
