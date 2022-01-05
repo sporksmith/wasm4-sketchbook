@@ -13,7 +13,7 @@ pub var frame_count: u64 = undefined;
 pub const panic = util.panic;
 
 // Configure logging.
-//pub const log_level: std.log.Level = .warn;
+pub const log_level: std.log.Level = .warn;
 pub const log = util.log;
 
 pub var prev_gamepad: u8 = undefined;
