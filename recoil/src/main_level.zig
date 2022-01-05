@@ -20,12 +20,15 @@ pub const MainLevel = struct {
     explosions: [n_players]?Explosion,
 
     first_stayalive_frame: ?u32,
+    victory: bool,
 
     pub fn init(self: *MainLevel) void {
         const middle = (platform.CANVAS_SIZE / 2) << 8;
         self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, platform.GAMEPAD1, &self.bullets[0]);
         self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, platform.GAMEPAD2, &self.bullets[1]);
         self.explosions = .{null} ** @typeInfo(@TypeOf(self.explosions)).Array.len;
+        self.first_stayalive_frame = null;
+        self.victory = false;
 
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
     }
@@ -57,7 +60,7 @@ pub const MainLevel = struct {
         var live_player_count: u8 = 0;
         for (self.players) |*mp, i| {
             if (mp.*) |*p| {
-                if (p.check_collisions()) {
+                if (!self.victory and p.check_collisions()) {
                     platform.tone(500, (16 << 24) | 38, 15, platform.TONE_TRIANGLE);
                     self.explosions[i] = Explosion.create(.{ .x = p.x, .y = p.y, .vx = p.vx, .vy = p.vy, .spread = 0x20, .draw_color = p.draw_color });
                     mp.* = null;
@@ -78,9 +81,16 @@ pub const MainLevel = struct {
             if (stayalive_frames_remaining > 0 and stayalive_frames_elapsed > 0) {
                 const seconds_remaining = @divTrunc(stayalive_frames_remaining, platform.TARGET_FPS) + 1;
                 var buf: [20:0]u8 = undefined;
-                _ = std.fmt.bufPrint(&buf, "Stay Alive! {}\x00", .{seconds_remaining}) catch unreachable;
+                _ = std.fmt.bufPrintZ(&buf, "Stay Alive! {}", .{seconds_remaining}) catch unreachable;
                 platform.text(&buf, 20, 80);
+            } else if (stayalive_frames_remaining <= 0) {
+                platform.text("Victory!", 50, 80);
+                platform.text("R to restart", 30, 90);
+                self.victory = true;
             }
+        } else if (live_player_count == 0) {
+            platform.text("Draw!", 50, 80);
+            platform.text("R to restart", 30, 90);
         }
 
         return null;
