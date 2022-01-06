@@ -72,6 +72,18 @@ fn _text(str: [*:0]const u8, x: i32, y: i32) void {
 }
 pub const text = if (tag == .freestanding) w4.text else _text;
 
+fn _diskr(dest: [*]u8, size: u32) u32 {
+    slog.debug("diskr(dest:{x} size:{}", .{ dest.ptr, size });
+    return 0;
+}
+pub const diskr = if (tag == .freestanding) w4.diskr else _diskr;
+
+fn _diskw(src: [*]const u8, size: u32) u32 {
+    slog.debug("diskw(src:{x} size:{}", .{ src.ptr, size });
+    return 0;
+}
+pub const diskw = if (tag == .freestanding) w4.diskw else _diskw;
+
 pub const TONE_PULSE1 = w4.TONE_PULSE1;
 pub const TONE_PULSE2 = w4.TONE_PULSE2;
 pub const TONE_TRIANGLE = w4.TONE_TRIANGLE;

@@ -60,10 +60,28 @@ pub const SplashLevel = struct {
     p1_type: PlayerType = .gamepad1,
     p2_type: PlayerType = .random,
     menu_selection: MenuSelection = .start,
-    prev_gamepad: u8 = 0,
+    prev_gamepad: u8 = 0xff,
+
+    fn save(self: Self) void {
+        const sz = 2;
+        var buf: [sz]u8 = undefined;
+        buf[0] = @enumToInt(self.p1_type);
+        buf[1] = @enumToInt(self.p2_type);
+        _ = platform.diskw(&buf, sz);
+    }
+
+    fn load(self: *Self) void {
+        const sz = 2;
+        var buf: [sz]u8 = undefined;
+        if (platform.diskr(&buf, sz) == sz) {
+            self.p1_type = @intToEnum(PlayerType, buf[0]);
+            self.p2_type = @intToEnum(PlayerType, buf[1]);
+        }
+    }
 
     pub fn init(self: *Self) void {
         self.* = Self{};
+        self.load();
     }
 
     fn create_mainlevel_init(self: *Self) main.LevelInitializer {
@@ -84,14 +102,20 @@ pub const SplashLevel = struct {
             switch (self.menu_selection) {
                 .p1 => self.p1_type = enumNext(self.p1_type),
                 .p2 => self.p2_type = enumNext(self.p2_type),
-                .start => return self.create_mainlevel_init(),
+                .start => {
+                    self.save();
+                    return self.create_mainlevel_init();
+                },
             }
         }
         if ((just_pressed & platform.BUTTON_LEFT) != 0) {
             switch (self.menu_selection) {
                 .p1 => self.p1_type = enumPrev(self.p1_type),
                 .p2 => self.p2_type = enumPrev(self.p2_type),
-                .start => return self.create_mainlevel_init(),
+                .start => {
+                    self.save();
+                    return self.create_mainlevel_init();
+                },
             }
         }
 
