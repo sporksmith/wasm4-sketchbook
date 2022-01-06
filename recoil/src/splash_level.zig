@@ -116,7 +116,7 @@ pub const SplashLevel = struct {
         if ((just_pressed & platform.BUTTON_UP) != 0) {
             self.menu_selection = enumPrev(self.menu_selection);
         }
-        if ((just_pressed & platform.BUTTON_RIGHT) != 0) {
+        if ((just_pressed & (platform.BUTTON_RIGHT | platform.BUTTON_1 | platform.BUTTON_2)) != 0) {
             switch (self.menu_selection) {
                 .p1 => self.p1_type = enumNext(self.p1_type),
                 .p2 => self.p2_type = enumNext(self.p2_type),
