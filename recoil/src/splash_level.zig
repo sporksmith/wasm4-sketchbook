@@ -1,6 +1,9 @@
 const platform = @import("platform.zig");
 const main = @import("main.zig");
 const main_level = @import("main_level.zig");
+const std = @import("std");
+
+const slog = std.log.scoped(.splash_level);
 
 const PlayerType = enum {
     gamepad1,
@@ -56,6 +59,7 @@ fn enumPrev(e: anytype) @TypeOf(e) {
 
 pub const SplashLevel = struct {
     const Self = @This();
+    const disk_magic: [4]u8 = .{ 0x1f, 0x83, 0xeb, 0x66 };
 
     p1_type: PlayerType = .gamepad1,
     p2_type: PlayerType = .random,
@@ -63,20 +67,34 @@ pub const SplashLevel = struct {
     prev_gamepad: u8 = 0xff,
 
     fn save(self: Self) void {
-        const sz = 2;
+        const sz = 6;
         var buf: [sz]u8 = undefined;
-        buf[0] = @enumToInt(self.p1_type);
-        buf[1] = @enumToInt(self.p2_type);
+        std.mem.copy(u8, buf[0..4], Self.disk_magic[0..4]);
+        buf[4] = @enumToInt(self.p1_type);
+        buf[5] = @enumToInt(self.p2_type);
         _ = platform.diskw(&buf, sz);
     }
 
     fn load(self: *Self) void {
-        const sz = 2;
+        const sz = 6;
         var buf: [sz]u8 = undefined;
-        if (platform.diskr(&buf, sz) == sz) {
-            self.p1_type = @intToEnum(PlayerType, buf[0]);
-            self.p2_type = @intToEnum(PlayerType, buf[1]);
+        const nread = platform.diskr(&buf, sz);
+        if (nread != sz) {
+            slog.debug("Failed to load: read {}", .{nread});
+            return;
         }
+        if (!std.mem.eql(u8, buf[0..4], &Self.disk_magic)) {
+            slog.debug("Failed to load: magic mismatch", .{});
+            return;
+        }
+        if (buf[4] >= @typeInfo(PlayerType).Enum.fields.len) {
+            slog.debug("Failed to load: bad p1_type", .{});
+        }
+        self.p1_type = @intToEnum(PlayerType, buf[4]);
+        if (buf[5] >= @typeInfo(PlayerType).Enum.fields.len) {
+            slog.debug("Failed to load: bad p2_type", .{});
+        }
+        self.p2_type = @intToEnum(PlayerType, buf[5]);
     }
 
     pub fn init(self: *Self) void {
