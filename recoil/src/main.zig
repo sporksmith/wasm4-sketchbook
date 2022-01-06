@@ -2,8 +2,13 @@ const platform = @import("platform.zig");
 const util = @import("util.zig");
 const std = @import("std");
 
-const MainLevel = @import("main_level.zig").MainLevel;
-const SplashLevel = @import("splash_level.zig").SplashLevel;
+const main_level = @import("main_level.zig");
+const MainLevel = main_level.MainLevel;
+const MainLevelOptions = main_level.MainLevelOptions;
+
+const splash_level = @import("splash_level.zig");
+const SplashLevel = splash_level.SplashLevel;
+const SplashLevelOptions = splash_level.SplashLevelOptions;
 
 const slog = std.log.scoped(.main);
 
@@ -20,32 +25,36 @@ pub const log = util.log;
 
 pub var prev_gamepad: u8 = undefined;
 
+pub const LevelInitializer = union(enum) {
+    splash_level: void,
+    main_level: MainLevelOptions,
+};
+
 const LevelUnion = union(enum) {
     splash_level: SplashLevel,
     main_level: MainLevel,
 
-    fn init(self: *LevelUnion, id: LevelId) void {
+    fn init(self: *LevelUnion, initializer: LevelInitializer) void {
         // Initialize new tag
-        switch (id) {
+        switch (initializer) {
             .splash_level => {
                 self.* = LevelUnion{ .splash_level = undefined };
                 self.splash_level.init();
             },
-            .main_level => {
+            .main_level => |o| {
                 self.* = LevelUnion{ .main_level = undefined };
-                self.main_level.init();
+                self.main_level.init(o);
             },
         }
     }
 
-    fn update(self: *LevelUnion) ?LevelId {
+    fn update(self: *LevelUnion) ?LevelInitializer {
         return switch (self.*) {
             LevelUnion.main_level => |*l| l.update(),
             LevelUnion.splash_level => |*l| l.update(),
         };
     }
 };
-pub const LevelId = std.meta.Tag(LevelUnion);
 
 test "level switch" {
     level.init(.splash_level);
@@ -56,7 +65,7 @@ var level: LevelUnion = undefined;
 
 export fn start() void {
     frame_count = 0;
-    level.init(.splash_level);
+    level.init(LevelInitializer.splash_level);
 }
 
 export fn update() void {

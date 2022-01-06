@@ -11,6 +11,11 @@ const slog = std.log.scoped(.main_level);
 const Bullets = Particles(10);
 const Explosion = Particles(100);
 
+pub const MainLevelOptions = struct {
+    p1_behavior: PlayerBehavior,
+    p2_behavior: PlayerBehavior,
+};
+
 pub const MainLevel = struct {
     const n_players = 2;
     const bullets_per_player = 3;
@@ -22,10 +27,10 @@ pub const MainLevel = struct {
     first_stayalive_frame: ?u32,
     gameover: bool,
 
-    pub fn init(self: *MainLevel) void {
+    pub fn init(self: *MainLevel, options: MainLevelOptions) void {
         const middle = (platform.CANVAS_SIZE / 2) << 8;
-        self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, PlayerBehavior{ .Human = HumanPlayerBehavior{ .gamepad = platform.GAMEPAD1 } }, &self.bullets[0]);
-        self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, PlayerBehavior{ .Random = RandomPlayerBehavior{} }, &self.bullets[1]);
+        self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, options.p1_behavior, &self.bullets[0]);
+        self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, options.p2_behavior, &self.bullets[1]);
         self.explosions = .{null} ** @typeInfo(@TypeOf(self.explosions)).Array.len;
         self.first_stayalive_frame = null;
         self.gameover = false;
@@ -33,7 +38,7 @@ pub const MainLevel = struct {
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
     }
 
-    pub fn update(self: *MainLevel) ?main.LevelId {
+    pub fn update(self: *MainLevel) ?main.LevelInitializer {
         for (self.players) |*mp| {
             if (mp.*) |*p| {
                 p.update();
@@ -113,7 +118,7 @@ const Direction = enum {
     DOWN,
 };
 
-const HumanPlayerBehavior = struct {
+pub const HumanPlayerBehavior = struct {
     gamepad: *const u8,
 
     fn get_gamepad(self: *HumanPlayerBehavior) u8 {
@@ -122,7 +127,7 @@ const HumanPlayerBehavior = struct {
     }
 };
 
-const RandomPlayerBehavior = struct {
+pub const RandomPlayerBehavior = struct {
     fn get_gamepad(self: *RandomPlayerBehavior) u8 {
         _ = self;
         const r = main.rnd.random().intRangeAtMost(i16, 0, 100);
@@ -142,7 +147,7 @@ const RandomPlayerBehavior = struct {
     }
 };
 
-const PlayerBehavior = union(enum) {
+pub const PlayerBehavior = union(enum) {
     Human: HumanPlayerBehavior,
     Random: RandomPlayerBehavior,
 

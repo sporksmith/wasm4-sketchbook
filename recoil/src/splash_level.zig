@@ -1,5 +1,6 @@
 const platform = @import("platform.zig");
 const main = @import("main.zig");
+const main_level = @import("main_level.zig");
 
 pub const SplashLevel = struct {
     const Self = @This();
@@ -11,7 +12,7 @@ pub const SplashLevel = struct {
         self.* = Self{ .p1_ready = false, .p2_ready = false };
     }
 
-    pub fn update(self: *Self) ?main.LevelId {
+    pub fn update(self: *Self) ?main.LevelInitializer {
         _ = self;
 
         var y: i32 = 0;
@@ -47,7 +48,8 @@ pub const SplashLevel = struct {
         }
 
         if (self.p1_ready and self.p2_ready) {
-            return .main_level;
+            const ml = main_level;
+            return main.LevelInitializer{ .main_level = ml.MainLevelOptions{ .p1_behavior = ml.PlayerBehavior{ .Human = ml.HumanPlayerBehavior{ .gamepad = platform.GAMEPAD1 } }, .p2_behavior = .Random } };
         }
 
         return null;
