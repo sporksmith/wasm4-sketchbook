@@ -39,7 +39,7 @@ pub const MainLevel = struct {
     }
 
     pub fn update(self: *MainLevel) ?main.LevelInitializer {
-        if (self.gameover and (platform.GAMEPAD1.* & platform.BUTTON_1) != 0) {
+        if (self.gameover and (platform.GAMEPAD1.* & (platform.BUTTON_1 | platform.BUTTON_2)) != 0) {
             return .splash_level;
         }
 
