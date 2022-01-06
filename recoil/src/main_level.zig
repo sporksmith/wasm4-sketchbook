@@ -31,6 +31,7 @@ pub const MainLevel = struct {
         const middle = (platform.CANVAS_SIZE / 2) << 8;
         self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, options.p1_behavior, &self.bullets[0]);
         self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, options.p2_behavior, &self.bullets[1]);
+        self.bullets = .{.{null} ** bullets_per_player} ** n_players;
         self.explosions = .{null} ** @typeInfo(@TypeOf(self.explosions)).Array.len;
         self.first_stayalive_frame = null;
         self.gameover = false;
