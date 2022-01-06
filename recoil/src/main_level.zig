@@ -169,7 +169,7 @@ const Player = struct {
     bullets: *[MainLevel.bullets_per_player]?Bullets,
     bulleti: usize = 0,
 
-    prev_gamepad: u8 = 0,
+    prev_gamepad: u8 = 0xff,
 
     const width = 3;
     const height = 3;
