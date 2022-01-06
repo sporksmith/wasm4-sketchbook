@@ -39,6 +39,10 @@ pub const MainLevel = struct {
     }
 
     pub fn update(self: *MainLevel) ?main.LevelInitializer {
+        if (self.gameover and (platform.GAMEPAD1.* & platform.BUTTON_1) != 0) {
+            return .splash_level;
+        }
+
         for (self.players) |*mp| {
             if (mp.*) |*p| {
                 p.update();
@@ -82,7 +86,7 @@ pub const MainLevel = struct {
             if (!(self.players[live_player_idx orelse unreachable] orelse unreachable).is_human()) {
                 // Last player is AI
                 platform.text("Death!", 50, 80);
-                platform.text("R to restart", 30, 90);
+                platform.text("X to restart", 30, 90);
                 self.gameover = true;
             } else {
                 if (self.first_stayalive_frame) |_| {} else {
@@ -98,13 +102,14 @@ pub const MainLevel = struct {
                     platform.text(&buf, 20, 80);
                 } else if (stayalive_frames_remaining <= 0) {
                     platform.text("Victory!", 50, 80);
-                    platform.text("R to restart", 30, 90);
+                    platform.text("X to restart", 30, 90);
                     self.gameover = true;
                 }
             }
         } else if (live_player_count == 0) {
             platform.text("Draw!", 50, 80);
-            platform.text("R to restart", 30, 90);
+            platform.text("X to restart", 30, 90);
+            self.gameover = true;
         }
 
         return null;
