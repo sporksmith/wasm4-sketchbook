@@ -20,15 +20,15 @@ pub const MainLevel = struct {
     explosions: [n_players]?Explosion,
 
     first_stayalive_frame: ?u32,
-    victory: bool,
+    gameover: bool,
 
     pub fn init(self: *MainLevel) void {
         const middle = (platform.CANVAS_SIZE / 2) << 8;
-        self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, platform.GAMEPAD1, &self.bullets[0]);
-        self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, platform.GAMEPAD2, &self.bullets[1]);
+        self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, PlayerBehavior{ .Human = HumanPlayerBehavior{ .gamepad = platform.GAMEPAD1 } }, &self.bullets[0]);
+        self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, PlayerBehavior{ .Random = RandomPlayerBehavior{} }, &self.bullets[1]);
         self.explosions = .{null} ** @typeInfo(@TypeOf(self.explosions)).Array.len;
         self.first_stayalive_frame = null;
-        self.victory = false;
+        self.gameover = false;
 
         platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
     }
@@ -58,35 +58,44 @@ pub const MainLevel = struct {
         // Collision checking reads the frame buffer - must be *after* we draw
         // collidables!
         var live_player_count: u8 = 0;
+        var live_player_idx: ?usize = null;
         for (self.players) |*mp, i| {
             if (mp.*) |*p| {
-                if (!self.victory and p.check_collisions()) {
+                if (!self.gameover and p.check_collisions()) {
                     platform.tone(500, (16 << 24) | 38, 15, platform.TONE_TRIANGLE);
                     self.explosions[i] = Explosion.create(.{ .x = p.x, .y = p.y, .vx = p.vx, .vy = p.vy, .spread = 0x20, .draw_color = p.draw_color });
                     mp.* = null;
                 } else {
                     live_player_count += 1;
+                    live_player_idx = i;
                 }
             }
         }
 
         // Is only 1 player alive?
         if (live_player_count == 1) {
-            if (self.first_stayalive_frame) |_| {} else {
-                self.first_stayalive_frame = main.frame_count;
-            }
-            const first_stayalive_frame = self.first_stayalive_frame orelse unreachable;
-            const stayalive_frames_elapsed = main.frame_count - first_stayalive_frame;
-            const stayalive_frames_remaining = 3 * platform.TARGET_FPS - @bitCast(i32, stayalive_frames_elapsed);
-            if (stayalive_frames_remaining > 0 and stayalive_frames_elapsed > 0) {
-                const seconds_remaining = @divTrunc(stayalive_frames_remaining, platform.TARGET_FPS) + 1;
-                var buf: [20:0]u8 = undefined;
-                _ = std.fmt.bufPrintZ(&buf, "Stay Alive! {}", .{seconds_remaining}) catch unreachable;
-                platform.text(&buf, 20, 80);
-            } else if (stayalive_frames_remaining <= 0) {
-                platform.text("Victory!", 50, 80);
+            if (!(self.players[live_player_idx orelse unreachable] orelse unreachable).is_human()) {
+                // Last player is AI
+                platform.text("Death!", 50, 80);
                 platform.text("R to restart", 30, 90);
-                self.victory = true;
+                self.gameover = true;
+            } else {
+                if (self.first_stayalive_frame) |_| {} else {
+                    self.first_stayalive_frame = main.frame_count;
+                }
+                const first_stayalive_frame = self.first_stayalive_frame orelse unreachable;
+                const stayalive_frames_elapsed = main.frame_count - first_stayalive_frame;
+                const stayalive_frames_remaining = 3 * platform.TARGET_FPS - @bitCast(i32, stayalive_frames_elapsed);
+                if (stayalive_frames_remaining > 0 and stayalive_frames_elapsed > 0) {
+                    const seconds_remaining = @divTrunc(stayalive_frames_remaining, platform.TARGET_FPS) + 1;
+                    var buf: [20:0]u8 = undefined;
+                    _ = std.fmt.bufPrintZ(&buf, "Stay Alive! {}", .{seconds_remaining}) catch unreachable;
+                    platform.text(&buf, 20, 80);
+                } else if (stayalive_frames_remaining <= 0) {
+                    platform.text("Victory!", 50, 80);
+                    platform.text("R to restart", 30, 90);
+                    self.gameover = true;
+                }
             }
         } else if (live_player_count == 0) {
             platform.text("Draw!", 50, 80);
@@ -104,13 +113,54 @@ const Direction = enum {
     DOWN,
 };
 
+const HumanPlayerBehavior = struct {
+    gamepad: *const u8,
+
+    fn get_gamepad(self: *HumanPlayerBehavior) u8 {
+        _ = self;
+        return self.gamepad.*;
+    }
+};
+
+const RandomPlayerBehavior = struct {
+    fn get_gamepad(self: *RandomPlayerBehavior) u8 {
+        _ = self;
+        const r = main.rnd.random().intRangeAtMost(i16, 0, 100);
+        if (r == 0) {
+            return platform.BUTTON_LEFT;
+        }
+        if (r == 1) {
+            return platform.BUTTON_RIGHT;
+        }
+        if (r == 2) {
+            return platform.BUTTON_UP;
+        }
+        if (r == 3) {
+            return platform.BUTTON_DOWN;
+        }
+        return 0;
+    }
+};
+
+const PlayerBehavior = union(enum) {
+    Human: HumanPlayerBehavior,
+    Random: RandomPlayerBehavior,
+
+    fn get_gamepad(self: *PlayerBehavior) u8 {
+        return switch (self.*) {
+            .Human => |*b| b.get_gamepad(),
+            .Random => |*b| b.get_gamepad(),
+        };
+    }
+};
+
 const Player = struct {
     x: u16,
     y: u16,
     vx: i16,
     vy: i16,
     draw_color: u8,
-    gamepad: *const u8,
+    behavior: PlayerBehavior,
     bullets: *[MainLevel.bullets_per_player]?Bullets,
     bulleti: usize = 0,
 
@@ -119,6 +169,13 @@ const Player = struct {
     const width = 3;
     const height = 3;
     const accel = 30;
+
+    pub fn is_human(self: Player) bool {
+        return switch (self.behavior) {
+            .Human => true,
+            else => false,
+        };
+    }
 
     pub fn check_collisions(self: Player) bool {
         const startx = @intCast(u8, self.x >> 8);
@@ -140,8 +197,8 @@ const Player = struct {
         return false;
     }
 
-    pub fn create(x: u16, y: u16, draw_color: u8, gamepad: *const u8, bullets: *[MainLevel.bullets_per_player]?Bullets) Player {
-        return Player{ .x = x, .y = y, .vx = 0, .vy = 0, .draw_color = draw_color, .gamepad = gamepad, .bullets = bullets };
+    pub fn create(x: u16, y: u16, draw_color: u8, behavior: PlayerBehavior, bullets: *[MainLevel.bullets_per_player]?Bullets) Player {
+        return Player{ .x = x, .y = y, .vx = 0, .vy = 0, .draw_color = draw_color, .behavior = behavior, .bullets = bullets };
     }
 
     fn fire(self: *Player, direction: Direction) void {
@@ -176,7 +233,7 @@ const Player = struct {
     }
 
     pub fn update(self: *Player) void {
-        const gamepad = self.gamepad.*;
+        const gamepad = self.behavior.get_gamepad();
         const just_pressed = gamepad & (gamepad ^ self.prev_gamepad);
 
         if (just_pressed & platform.BUTTON_LEFT != 0) {
