@@ -48,8 +48,9 @@ pub const SplashLevel = struct {
         }
 
         if (self.p1_ready and self.p2_ready) {
-            const ml = main_level;
-            return main.LevelInitializer{ .main_level = ml.MainLevelOptions{ .p1_behavior = ml.PlayerBehavior{ .Human = ml.HumanPlayerBehavior{ .gamepad = platform.GAMEPAD1 } }, .p2_behavior = .Random } };
+            const p1 = main_level.PlayerBehavior{ .Human = .{ .gamepad = platform.GAMEPAD1 } };
+            const p2 = main_level.PlayerBehavior.Random;
+            return main.LevelInitializer{ .main_level = .{ .p1_behavior = p1, .p2_behavior = p2 } };
         }
 
         return null;
