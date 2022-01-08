@@ -22,7 +22,7 @@ const PlayerType = enum {
         return switch (self) {
             .gamepad1 => main_level.PlayerBehavior{ .Human = .{ .gamepad = platform.GAMEPAD1 } },
             .gamepad2 => main_level.PlayerBehavior{ .Human = .{ .gamepad = platform.GAMEPAD2 } },
-            .random => main_level.PlayerBehavior.Random,
+            .random => main_level.PlayerBehavior{ .Random = .{} },
         };
     }
 };

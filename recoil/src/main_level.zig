@@ -134,20 +134,30 @@ pub const HumanPlayerBehavior = struct {
 };
 
 pub const RandomPlayerBehavior = struct {
+    frame: u32 = 0,
+
     fn get_gamepad(self: *RandomPlayerBehavior) u8 {
-        _ = self;
-        const r = main.rnd.random().intRangeAtMost(i16, 0, 100);
+        self.frame += 1;
+        if (self.frame == 1) {
+            // Always do nothing on first frame to clear gamepad state.
+            return 0;
+        }
+
+        // Always pick *some* direction, (other than right) on the 2nd frame.
+        // On subsequent frames most likely result will be idle.
+        const max: i16 = if (self.frame == 2) 2 else 100;
+        const r = main.rnd.random().intRangeAtMost(i16, 0, max);
         if (r == 0) {
             return platform.BUTTON_LEFT;
         }
         if (r == 1) {
-            return platform.BUTTON_RIGHT;
-        }
-        if (r == 2) {
             return platform.BUTTON_UP;
         }
-        if (r == 3) {
+        if (r == 2) {
             return platform.BUTTON_DOWN;
+        }
+        if (r == 3) {
+            return platform.BUTTON_RIGHT;
         }
         return 0;
     }
