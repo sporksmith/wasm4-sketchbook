@@ -244,8 +244,8 @@ const Player = struct {
                 self.vy -= recoil;
             },
         }
-        const bullet_x = self.x + ((Player.width / 2) << 8);
-        const bullet_y = self.y + ((Player.height / 2) << 8);
+        const bullet_x = self.x + (Player.width << 8) / 2;
+        const bullet_y = self.y + (Player.height << 8) / 2;
         self.bullets[self.bulleti] = Bullets.create(.{ .x = bullet_x, .y = bullet_y, .vx = bullet_vx, .vy = bullet_vy, .spread = bullet_spread, .draw_color = self.draw_color });
         self.bulleti = (self.bulleti + 1) % self.bullets.len;
         util.tone(.{ .freq1 = 370, .freq2 = 160, .attack = 0, .decay = 0, .sustain = 38, .release = 16, .volume = 80, .channel = .triangle });
