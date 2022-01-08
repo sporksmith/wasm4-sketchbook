@@ -35,8 +35,6 @@ pub const MainLevel = struct {
         self.explosions = .{null} ** @typeInfo(@TypeOf(self.explosions)).Array.len;
         self.first_stayalive_frame = null;
         self.gameover = false;
-
-        platform.PALETTE.* = [_]u32{ 0xfbf7f3, 0xe5b083, 0x426e5d, 0x20283d };
     }
 
     pub fn update(self: *MainLevel) ?main.LevelInitializer {
