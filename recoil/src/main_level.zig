@@ -250,7 +250,7 @@ const Player = struct {
         const bullet_y = self.y + ((Player.height / 2) << 8);
         self.bullets[self.bulleti] = Bullets.create(.{ .x = bullet_x, .y = bullet_y, .vx = bullet_vx, .vy = bullet_vy, .spread = bullet_spread, .draw_color = self.draw_color });
         self.bulleti = (self.bulleti + 1) % @typeInfo(@TypeOf(self.bullets.*)).Array.len;
-        platform.tone(370 | (160 << 16), (16 << 24) | 38, 15, platform.TONE_NOISE);
+        platform.tone(370 | (160 << 16), (16 << 8) | 38, 80, platform.TONE_NOISE);
     }
 
     pub fn update(self: *Player) void {
