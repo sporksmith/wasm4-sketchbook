@@ -2,9 +2,10 @@ const main = @import("main.zig");
 const main_level = @import("main_level.zig");
 const std = @import("std");
 const game = @import("game.zig");
-const root = @import("root");
 
-const platform_mod = @import("platform.zig");
+const engine = @import("engine");
+
+const platform_mod = engine.platform;
 const Platform = platform_mod.Platform;
 const platform = &platform_mod.platform;
 

@@ -1,6 +1,7 @@
 const std = @import("std");
+const engine = @import("engine");
 
-const platform_mod = @import("platform.zig");
+const platform_mod = engine.platform;
 const Platform = platform_mod.Platform;
 const platform = &platform_mod.platform;
 

@@ -4,6 +4,7 @@ pub fn build(b: *std.build.Builder) void {
     const mode = b.standardReleaseOptions();
 
     const lib = b.addSharedLibrary("cart", "src/main.zig", .unversioned);
+    lib.addPackagePath("engine", "src/engine.zig");
     lib.export_symbol_names = &[_][]const u8{ "start", "update" };
     lib.setBuildMode(mode);
     lib.setTarget(.{ .cpu_arch = .wasm32, .os_tag = .freestanding });
