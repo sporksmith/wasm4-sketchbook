@@ -151,26 +151,26 @@ const TestBackend = struct {
         return self._DRAW_COLORS.*;
     }
     pub fn set_draw_colors(self: *Self, draw_colors: u16) void {
-        self._DRAW_COLORS.* = draw_colors;
+        self._DRAW_COLORS = draw_colors;
     }
 
     pub fn get_mouse_x(self: Self) i16 {
-        return self._MOUSE_X.*;
+        return self._MOUSE_X;
     }
 
     pub fn get_mouse_y(self: Self) i16 {
-        return self._MOUSE_Y.*;
+        return self._MOUSE_Y;
     }
 
     pub fn get_mouse_buttons(self: Self) u8 {
-        return self._MOUSE_BUTTONS.*;
+        return self._MOUSE_BUTTONS;
     }
 
     pub fn get_system_flags(self: Self) u8 {
-        return self._SYSTEM_FLAGS.*;
+        return self._SYSTEM_FLAGS;
     }
     pub fn set_system_flags(self: *Self, flags: u8) void {
-        self._SYSTEM_FLAGS.* = flags;
+        self._SYSTEM_FLAGS = flags;
     }
 
     pub fn get_framebuffer(self: *const Self) *const [6400]u8 {
@@ -202,7 +202,7 @@ const TestBackend = struct {
 
     pub fn tone(self: *Self, frequency: u32, duration: u32, volume: u32, flags: u32) void {
         _ = self;
-        slog.tone("tone(frequency:{} duration:{} volume:{} flags:{}", .{ frequency, duration, volume, flags });
+        slog.debug("tone(frequency:{} duration:{} volume:{} flags:{}", .{ frequency, duration, volume, flags });
     }
 
     pub fn text(self: *Self, str: [*:0]const u8, x: i32, y: i32) void {
@@ -212,12 +212,13 @@ const TestBackend = struct {
 
     pub fn diskr(self: Self, dest: [*]u8, size: u32) u32 {
         _ = self;
-        slog.debug("diskr(dest:{x} size:{}", .{ dest.ptr, size });
+        slog.debug("diskr(dest:{x} size:{}", .{ &dest[0], size });
+        return size;
     }
 
     pub fn diskw(self: *Self, src: [*]const u8, size: u32) u32 {
         _ = self;
-        slog.debug("diskw(src:{x} size:{}", .{ src.ptr, size });
+        slog.debug("diskw(src:{x} size:{}", .{ &src[0], size });
         return size;
     }
 
