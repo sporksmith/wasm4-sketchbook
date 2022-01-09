@@ -1,11 +1,13 @@
 const std = @import("std");
 const util = @import("util.zig");
-const root = @import("root");
-const game = @import("game.zig");
 
 const platform_mod = @import("platform.zig");
 const Platform = platform_mod.Platform;
 const platform = &platform_mod.platform;
+
+const game_mod = @import("game.zig");
+const Game = game_mod.Game;
+const game = &game_mod.game;
 
 const abs = util.abs;
 const add_velocity = util.add_velocity;
@@ -42,7 +44,7 @@ pub const MainLevel = struct {
         self.gameover = false;
     }
 
-    pub fn update(self: *Self) ?game.LevelInitializer {
+    pub fn update(self: *Self) ?game_mod.LevelInitializer {
         if (self.gameover and (platform.get_gamepad(.gamepad1) & (Platform.BUTTON_1 | Platform.BUTTON_2)) != 0) {
             return .splash_level;
         }
@@ -94,10 +96,10 @@ pub const MainLevel = struct {
                 self.gameover = true;
             } else {
                 if (self.first_stayalive_frame) |_| {} else {
-                    self.first_stayalive_frame = root.game.frame_count;
+                    self.first_stayalive_frame = game.frame_count;
                 }
                 const first_stayalive_frame = self.first_stayalive_frame orelse unreachable;
-                const stayalive_frames_elapsed = root.game.frame_count - first_stayalive_frame;
+                const stayalive_frames_elapsed = game.frame_count - first_stayalive_frame;
                 const stayalive_frames_remaining = 3 * Platform.TARGET_FPS - @bitCast(i32, stayalive_frames_elapsed);
                 if (stayalive_frames_remaining > 0 and stayalive_frames_elapsed > 0) {
                     const seconds_remaining = @divTrunc(stayalive_frames_remaining, Platform.TARGET_FPS) + 1;
@@ -149,7 +151,7 @@ pub const RandomPlayerBehavior = struct {
         // Always pick *some* direction, (other than right) on the 2nd frame.
         // On subsequent frames most likely result will be idle.
         const max: i16 = if (self.frame == 2) 2 else 100;
-        const r = root.game.rnd.random().intRangeAtMost(i16, 0, max);
+        const r = game.rnd.random().intRangeAtMost(i16, 0, max);
         if (r == 0) {
             return Platform.BUTTON_LEFT;
         }
@@ -321,7 +323,7 @@ fn Particles(comptime n: u32) type {
         pub fn init_xs(self: *Self, x: u16, rand_min: i16, rand_most: i16) void {
             var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                const err = root.game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
+                const err = game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
                 // XXX: rename
                 self.xs[i] = util.add_velocity(x, err);
             }
@@ -330,7 +332,7 @@ fn Particles(comptime n: u32) type {
         pub fn init_ys(self: *Self, y: u16, rand_min: i16, rand_most: i16) void {
             var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                const err = root.game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
+                const err = game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
                 // XXX: rename
                 self.ys[i] = util.add_velocity(y, err);
             }
@@ -339,14 +341,14 @@ fn Particles(comptime n: u32) type {
         pub fn init_vxs(self: *Self, vx: i16, rand_min: i16, rand_most: i16) void {
             var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                self.vxs[i] = vx + root.game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
+                self.vxs[i] = vx + game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
             }
         }
 
         pub fn init_vys(self: *Self, vy: i16, rand_min: i16, rand_most: i16) void {
             var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                self.vys[i] = vy + root.game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
+                self.vys[i] = vy + game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
             }
         }
 

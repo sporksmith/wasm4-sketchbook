@@ -16,8 +16,8 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) nore
 }
 
 const game_mod = @import("game.zig");
-pub const Game = game_mod.Game;
-pub var game: Game = .{};
+const Game = game_mod.Game;
+const game = &game_mod.game;
 
 export fn start() void {
     game.init();

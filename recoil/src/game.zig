@@ -69,3 +69,5 @@ pub const Game = struct {
         self.prev_gamepad = platform.get_gamepad(.gamepad1);
     }
 };
+
+pub var game: Game = .{};
