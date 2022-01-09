@@ -100,48 +100,6 @@ pub fn tracef(comptime msg: [:0]const u8, args: anytype) void {
     platform.tracef(msg.ptr, &buf);
 }
 
-/// Used by `std.log`, and partly cargo-culted from example in `std/log.zig`.
-/// Uses a fixed-size buffer on the stack and plumbs through w4.trace.
-const max_log_line_length = 200;
-pub fn log(comptime level: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime fmt: []const u8, args: anytype) void {
-    const full_fmt = comptime "[" ++ level.asText() ++ "] (" ++ @tagName(scope) ++ ") " ++ fmt ++ "\x00";
-
-    // This is a bit over-engineered, but notably removes the length
-    // restriction for log messages that don't do any formatting.
-    // This also lets us safely recurse below.
-    switch (@typeInfo(@TypeOf(args))) {
-        .Struct => |s| {
-            if (s.fields.len == 0) {
-                platform.trace(full_fmt);
-                return;
-            }
-        },
-        else => {},
-    }
-
-    var buf: [max_log_line_length:0]u8 = undefined;
-    _ = std.fmt.bufPrint(&buf, full_fmt, args) catch {
-        std.log.warn("Failed to log: " ++ full_fmt, .{});
-        return;
-    };
-    platform.trace(&buf);
-}
-
-// Override panic behavior.
-pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) noreturn {
-    // Use a raw call to `trace` to warn that we're panicking, so we we at
-    // least get something if the logging itself is causing the panic.
-    platform.trace("Panicking:");
-
-    // Attempt to log the trace, if present.
-    std.log.warn("panic msg: {s}", .{msg});
-    std.log.warn("panic trace: {?}", .{error_return_trace});
-
-    // Easiest way to satisfy `noreturn`. Doesn't seem to report anything, but at least
-    // returns control to the wasm engine with some kind of error.
-    std.builtin.default_panic(msg, error_return_trace);
-}
-
 pub fn add_velocity(pos: u16, vel: i16) u16 {
     const pos32 = @as(i32, pos);
     const vel32 = @as(i32, vel);

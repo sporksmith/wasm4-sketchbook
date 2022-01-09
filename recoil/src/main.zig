@@ -1,4 +1,4 @@
-const platform = @import("platform.zig");
+const platform_module = @import("platform.zig");
 const util = @import("util.zig");
 const std = @import("std");
 
@@ -12,16 +12,23 @@ const SplashLevelOptions = splash_level.SplashLevelOptions;
 
 const slog = std.log.scoped(.main);
 
+const Platform = platform_module.Wasm4Platform;
+pub var platform = Platform.create(.{});
+
 // TODO: seed
 pub var rnd = std.rand.DefaultPrng.init(0);
 pub var frame_count: u32 = undefined;
 
-// Override default panic handler.
-pub const panic = util.panic;
-
 // Configure logging.
 pub const log_level: std.log.Level = .warn;
-pub const log = util.log;
+pub fn log(comptime llevel: std.log.Level, comptime scope: @TypeOf(.EnumLiteral), comptime fmt: []const u8, args: anytype) void {
+    platform.log(llevel, scope, fmt, args);
+}
+
+// Override default panic handler.
+pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) noreturn {
+    platform.panic(msg, error_return_trace);
+}
 
 pub var prev_gamepad: u8 = undefined;
 
@@ -32,9 +39,9 @@ pub const LevelInitializer = union(enum) {
 
 const LevelUnion = union(enum) {
     splash_level: SplashLevel,
-    main_level: MainLevel,
+    main_level: MainLevel(Platform),
 
-    fn init(self: *LevelUnion, initializer: LevelInitializer) void {
+    fn init(self: *LevelUnion, pplatform: anytype, initializer: LevelInitializer) void {
         // Initialize new tag
         switch (initializer) {
             .splash_level => {
@@ -43,7 +50,7 @@ const LevelUnion = union(enum) {
             },
             .main_level => |o| {
                 self.* = LevelUnion{ .main_level = undefined };
-                self.main_level.init(o);
+                self.main_level.init(pplatform, o);
             },
         }
     }
@@ -77,7 +84,7 @@ export fn update() void {
         level.init(next);
     }
 
-    prev_gamepad = platform.GAMEPAD1.*;
+    prev_gamepad = platform.get_gamepad1();
 }
 
 test {
