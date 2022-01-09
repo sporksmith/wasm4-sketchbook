@@ -141,7 +141,7 @@ const TestBackend = struct {
 
     _DRAW_COLORS: u16 = 0,
     _PALETTE: [4]u32 = .{ 0, 0, 0, 0 },
-    _FRAMEBUFFER: [Self.CANVAS_SIZE * Self.CANVAS_SIZE * 2 / 8]u8 = .{0} ** (Self.CANVAS_SIZE * Self.CANVAS_SIZE * 2 / 8),
+    _FRAMEBUFFER: [CANVAS_SIZE * CANVAS_SIZE * 2 / 8]u8 = .{0} ** (CANVAS_SIZE * CANVAS_SIZE * 2 / 8),
     _GAMEPAD1: u8 = 0,
     _GAMEPAD2: u8 = 0,
     _MOUSE_X: i16 = 0,
@@ -189,7 +189,7 @@ const TestBackend = struct {
 
     pub fn trace(self: *Self, x: [*:0]const u8) void {
         _ = self;
-        slog.debug("{s}\n", .{x});
+        std.debug.print("{s}\n", .{x});
     }
 
     pub fn blit(self: *Self, sprite: [*]const u8, x: i32, y: i32, width: i32, height: i32, flags: u32) void {
@@ -232,6 +232,40 @@ const TestBackend = struct {
     }
 };
 
+pub const DrawColor = u4;
+pub const DrawColors = struct {
+    dc1: DrawColor = 0,
+    dc2: DrawColor = 0,
+    dc3: DrawColor = 0,
+    dc4: DrawColor = 0,
+};
+
+pub const ToneChannel = enum(u32) {
+    pulse1 = TONE_PULSE1,
+    pulse2 = TONE_PULSE2,
+    triangle = TONE_TRIANGLE,
+    noise = TONE_NOISE,
+};
+
+pub const ToneDutyCycle = enum(u32) {
+    c_12_5 = TONE_MODE1,
+    c_25 = TONE_MODE2,
+    c_50 = TONE_MODE3,
+    c_75 = TONE_MODE4,
+};
+
+pub const ToneParams = struct {
+    freq1: u16,
+    freq2: u16 = 0,
+    attack: u8 = 0,
+    decay: u8 = 0,
+    sustain: u8,
+    release: u8 = 0,
+    channel: ToneChannel,
+    duty_cycle: ToneDutyCycle = .c_12_5,
+    volume: u8 = 100,
+};
+
 fn Platform(Backend: anytype) type {
     return struct {
         const Self = @This();
@@ -241,12 +275,6 @@ fn Platform(Backend: anytype) type {
             return Self{ ._backend = backend };
         }
 
-        pub const DrawColors = struct {
-            dc1: u4 = 0,
-            dc2: u4 = 0,
-            dc3: u4 = 0,
-            dc4: u4 = 0,
-        };
         pub fn get_draw_colors(self: Self) DrawColors {
             const raw = self._backend.draw_colors();
             return .{ .dc1 = raw & 0xf, .dc2 = (raw << 4) & 0xf, .dc3 = (raw << 8) & 0xf, .dc4 = (raw << 12) & 0xf };
@@ -280,10 +308,10 @@ fn Platform(Backend: anytype) type {
         }
 
         pub fn get_framebuffer(self: *const Self) *const [6400]u8 {
-            return self._backend.framebuffer();
+            return self._backend.get_framebuffer();
         }
         pub fn get_framebuffer_mut(self: *Self) *[6400]u8 {
-            return self._backend.framebuffer_mut();
+            return self._backend.get_framebuffer_mut();
         }
 
         pub fn rect(self: *Self, x: i32, y: i32, width: u32, height: u32) void {
@@ -300,10 +328,6 @@ fn Platform(Backend: anytype) type {
 
         pub fn line(self: *Self, x1: i32, y1: i32, x2: i32, y2: i32) void {
             self._backend.line(x1, y1, x2, y2);
-        }
-
-        pub fn tone(self: *Self, frequency: u32, duration: u32, volume: u32, flags: u32) void {
-            self._backend.tone(frequency, duration, volume, flags);
         }
 
         pub fn text(self: *Self, str: [*:0]const u8, x: i32, y: i32) void {
@@ -323,6 +347,23 @@ fn Platform(Backend: anytype) type {
                 .gamepad1 => self._backend.get_gamepad1(),
                 .gamepad2 => self._backend.get_gamepad2(),
             };
+        }
+
+        pub fn get_pixel(self: Self, x: u8, y: u8) DrawColor {
+            const pixel_idx = @intCast(usize, y) * CANVAS_SIZE + @intCast(usize, x);
+            const byte_idx = pixel_idx / 4; // 4 pixels per byte
+            const shift = @intCast(u3, pixel_idx & 0b11) * 2;
+            const byte = self.get_framebuffer()[byte_idx];
+            const rv = ((byte >> shift) & 0b11) + 1;
+            //std.log.debug("get_pixel x:{} y:{} pixel_idx:{} byte_idx:{} shift:{} byte:{} rv:{}", .{ x, y, pixel_idx, byte_idx, shift, byte, rv });
+            return @intCast(DrawColor, rv);
+        }
+
+        pub fn tone(self: *Self, params: ToneParams) void {
+            const freq = @as(u32, params.freq1) | (@as(u32, params.freq2) << 16);
+            const duration = (@as(u32, params.attack) << 24) | (@as(u32, params.decay) << 16) | @as(u32, params.sustain) | (@as(u32, params.release) << 8);
+            const flags = @enumToInt(params.channel) | @enumToInt(params.duty_cycle);
+            self._backend.tone(freq, duration, params.volume, flags);
         }
 
         /// Used by `std.log`, and partly cargo-culted from example in `std/log.zig`.

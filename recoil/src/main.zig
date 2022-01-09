@@ -1,14 +1,9 @@
-const platform_module = @import("platform.zig");
-const util = @import("util.zig");
 const std = @import("std");
+const builtin = @import("builtin");
 
-const slog = std.log.scoped(.main);
-
-const Platform = platform_module.Wasm4Platform;
-var platform = Platform.create(.{});
-
-const game_mod = @import("game.zig").for_platform(Platform);
-const Game = game_mod.Game;
+const platform_mod = @import("platform.zig");
+pub const Platform = if (!builtin.is_test) platform_mod.Wasm4Platform else platform_mod.TestPlatform;
+pub var platform = Platform.create(.{});
 
 // Configure logging.
 pub const log_level: std.log.Level = .warn;
@@ -21,7 +16,9 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) nore
     platform.panic(msg, error_return_trace);
 }
 
-var game: Game = .{ .platform = &platform };
+const game_mod = @import("game.zig");
+pub const Game = game_mod.Game;
+pub var game: Game = .{};
 
 export fn start() void {
     game.init();
@@ -32,6 +29,7 @@ export fn update() void {
 }
 
 test {
+    // TODO: Make
     // Pull in referenced decls and tests.
     std.testing.refAllDecls(@This());
 }
