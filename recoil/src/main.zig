@@ -2,22 +2,13 @@ const platform_module = @import("platform.zig");
 const util = @import("util.zig");
 const std = @import("std");
 
-const main_level = @import("main_level.zig");
-const MainLevel = main_level.MainLevel;
-const MainLevelOptions = main_level.MainLevelOptions;
-
-const splash_level = @import("splash_level.zig");
-const SplashLevel = splash_level.SplashLevel;
-const SplashLevelOptions = splash_level.SplashLevelOptions;
-
 const slog = std.log.scoped(.main);
 
 const Platform = platform_module.Wasm4Platform;
-pub var platform = Platform.create(.{});
+var platform = Platform.create(.{});
 
-// TODO: seed
-pub var rnd = std.rand.DefaultPrng.init(0);
-pub var frame_count: u32 = undefined;
+const game_mod = @import("game.zig").for_platform(Platform);
+const Game = game_mod.Game;
 
 // Configure logging.
 pub const log_level: std.log.Level = .warn;
@@ -30,61 +21,14 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) nore
     platform.panic(msg, error_return_trace);
 }
 
-pub var prev_gamepad: u8 = undefined;
-
-pub const LevelInitializer = union(enum) {
-    splash_level: void,
-    main_level: MainLevelOptions,
-};
-
-const LevelUnion = union(enum) {
-    splash_level: SplashLevel,
-    main_level: MainLevel(Platform),
-
-    fn init(self: *LevelUnion, pplatform: anytype, initializer: LevelInitializer) void {
-        // Initialize new tag
-        switch (initializer) {
-            .splash_level => {
-                self.* = LevelUnion{ .splash_level = undefined };
-                self.splash_level.init();
-            },
-            .main_level => |o| {
-                self.* = LevelUnion{ .main_level = undefined };
-                self.main_level.init(pplatform, o);
-            },
-        }
-    }
-
-    fn update(self: *LevelUnion) ?LevelInitializer {
-        return switch (self.*) {
-            LevelUnion.main_level => |*l| l.update(),
-            LevelUnion.splash_level => |*l| l.update(),
-        };
-    }
-};
-
-test "level switch" {
-    level.init(.splash_level);
-    level.init(.main_level);
-}
-
-var level: LevelUnion = undefined;
+var game: Game = .{ .platform = &platform };
 
 export fn start() void {
-    frame_count = 0;
-    level.init(LevelInitializer.splash_level);
+    game.init();
 }
 
 export fn update() void {
-    frame_count += 1;
-
-    if (level.update()) |next| {
-        slog.debug("Switching level", .{});
-        rnd = std.rand.DefaultPrng.init(frame_count);
-        level.init(next);
-    }
-
-    prev_gamepad = platform.get_gamepad1();
+    game.update();
 }
 
 test {

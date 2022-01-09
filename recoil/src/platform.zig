@@ -35,6 +35,11 @@ pub const TONE_MODE2 = w4.TONE_MODE2;
 pub const TONE_MODE3 = w4.TONE_MODE3;
 pub const TONE_MODE4 = w4.TONE_MODE4;
 
+pub const GamepadId = enum {
+    gamepad1,
+    gamepad2,
+};
+
 const Wasm4Backend = struct {
     const Self = @This();
 
@@ -301,6 +306,10 @@ fn Platform(Backend: anytype) type {
             self._backend.tone(frequency, duration, volume, flags);
         }
 
+        pub fn text(self: *Self, str: [*:0]const u8, x: i32, y: i32) void {
+            self._backend.text(str, x, y);
+        }
+
         pub fn diskr(self: Self, dest: [*]u8, size: u32) u32 {
             return self._backend.diskr(dest, size);
         }
@@ -309,12 +318,11 @@ fn Platform(Backend: anytype) type {
             return self._backend.diskw(src, size);
         }
 
-        pub fn get_gamepad1(self: Self) u8 {
-            return self._backend.get_gamepad1();
-        }
-
-        pub fn get_gamepad2(self: Self) u8 {
-            return self._backend.get_gamepad2();
+        pub fn get_gamepad(self: Self, gamepad_id: GamepadId) u8 {
+            return switch (gamepad_id) {
+                .gamepad1 => self._backend.get_gamepad1(),
+                .gamepad2 => self._backend.get_gamepad2(),
+            };
         }
 
         /// Used by `std.log`, and partly cargo-culted from example in `std/log.zig`.
