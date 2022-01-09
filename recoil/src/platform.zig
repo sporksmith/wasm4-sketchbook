@@ -1,44 +1,42 @@
 const std = @import("std");
 const w4 = @import("wasm4.zig");
-const tag = @import("builtin").os.tag;
+const builtin = @import("builtin");
 const slog = std.log.scoped(.platform);
 
-pub const TARGET_FPS = 60;
-pub const CANVAS_SIZE = w4.CANVAS_SIZE;
+// Packages up constants we want to expose through Platform.
+const Constants = struct {
+    pub const CANVAS_SIZE = w4.CANVAS_SIZE;
+    pub const TARGET_FPS = 60;
 
-pub const BUTTON_1: u8 = w4.BUTTON_1;
-pub const BUTTON_2: u8 = w4.BUTTON_2;
-pub const BUTTON_LEFT: u8 = w4.BUTTON_LEFT;
-pub const BUTTON_RIGHT: u8 = w4.BUTTON_RIGHT;
-pub const BUTTON_UP: u8 = w4.BUTTON_UP;
-pub const BUTTON_DOWN: u8 = w4.BUTTON_DOWN;
-
-pub const MOUSE_LEFT: u8 = w4.MOUSE_LEFT;
-pub const MOUSE_RIGHT: u8 = w4.MOUSE_RIGHT;
-pub const MOUSE_MIDDLE: u8 = w4.MOUSE_MIDDLE;
-
-pub const SYSTEM_PRESERVE_FRAMEBUFFER: u8 = w4.SYSTEM_PRESERVE_FRAMEBUFFER;
-pub const SYSTEM_HIDE_GAMEPAD_OVERLAY: u8 = w4.SYSTEM_HIDE_GAMEPAD_OVERLAY;
-
-pub const BLIT_2BPP: u32 = w4.BLIT_2BPP;
-pub const BLIT_1BPP: u32 = w4.BLIT_1BPP;
-pub const BLIT_FLIP_X: u32 = w4.BLIT_FLIP_X;
-pub const BLIT_FLIP_Y: u32 = w4.BLIT_FLIP_Y;
-pub const BLIT_ROTATE: u32 = w4.BLIT_ROTATE;
-
-pub const TONE_PULSE1 = w4.TONE_PULSE1;
-pub const TONE_PULSE2 = w4.TONE_PULSE2;
-pub const TONE_TRIANGLE = w4.TONE_TRIANGLE;
-pub const TONE_NOISE = w4.TONE_NOISE;
-pub const TONE_MODE1 = w4.TONE_MODE1;
-pub const TONE_MODE2 = w4.TONE_MODE2;
-pub const TONE_MODE3 = w4.TONE_MODE3;
-pub const TONE_MODE4 = w4.TONE_MODE4;
-
-pub const GamepadId = enum {
-    gamepad1,
-    gamepad2,
+    pub const BUTTON_1: u8 = w4.BUTTON_1;
+    pub const BUTTON_2: u8 = w4.BUTTON_2;
+    pub const BUTTON_LEFT: u8 = w4.BUTTON_LEFT;
+    pub const BUTTON_RIGHT: u8 = w4.BUTTON_RIGHT;
+    pub const BUTTON_UP: u8 = w4.BUTTON_UP;
+    pub const BUTTON_DOWN: u8 = w4.BUTTON_DOWN;
 };
+
+const MOUSE_LEFT: u8 = w4.MOUSE_LEFT;
+const MOUSE_RIGHT: u8 = w4.MOUSE_RIGHT;
+const MOUSE_MIDDLE: u8 = w4.MOUSE_MIDDLE;
+
+const SYSTEM_PRESERVE_FRAMEBUFFER: u8 = w4.SYSTEM_PRESERVE_FRAMEBUFFER;
+const SYSTEM_HIDE_GAMEPAD_OVERLAY: u8 = w4.SYSTEM_HIDE_GAMEPAD_OVERLAY;
+
+const BLIT_2BPP: u32 = w4.BLIT_2BPP;
+const BLIT_1BPP: u32 = w4.BLIT_1BPP;
+const BLIT_FLIP_X: u32 = w4.BLIT_FLIP_X;
+const BLIT_FLIP_Y: u32 = w4.BLIT_FLIP_Y;
+const BLIT_ROTATE: u32 = w4.BLIT_ROTATE;
+
+const TONE_PULSE1 = w4.TONE_PULSE1;
+const TONE_PULSE2 = w4.TONE_PULSE2;
+const TONE_TRIANGLE = w4.TONE_TRIANGLE;
+const TONE_NOISE = w4.TONE_NOISE;
+const TONE_MODE1 = w4.TONE_MODE1;
+const TONE_MODE2 = w4.TONE_MODE2;
+const TONE_MODE3 = w4.TONE_MODE3;
+const TONE_MODE4 = w4.TONE_MODE4;
 
 const Wasm4Backend = struct {
     const Self = @This();
@@ -141,7 +139,7 @@ const TestBackend = struct {
 
     _DRAW_COLORS: u16 = 0,
     _PALETTE: [4]u32 = .{ 0, 0, 0, 0 },
-    _FRAMEBUFFER: [CANVAS_SIZE * CANVAS_SIZE * 2 / 8]u8 = .{0} ** (CANVAS_SIZE * CANVAS_SIZE * 2 / 8),
+    _FRAMEBUFFER: [6400]u8 = .{0} ** (6400),
     _GAMEPAD1: u8 = 0,
     _GAMEPAD2: u8 = 0,
     _MOUSE_X: i16 = 0,
@@ -232,43 +230,50 @@ const TestBackend = struct {
     }
 };
 
-pub const DrawColor = u4;
-pub const DrawColors = struct {
-    dc1: DrawColor = 0,
-    dc2: DrawColor = 0,
-    dc3: DrawColor = 0,
-    dc4: DrawColor = 0,
-};
-
-pub const ToneChannel = enum(u32) {
-    pulse1 = TONE_PULSE1,
-    pulse2 = TONE_PULSE2,
-    triangle = TONE_TRIANGLE,
-    noise = TONE_NOISE,
-};
-
-pub const ToneDutyCycle = enum(u32) {
-    c_12_5 = TONE_MODE1,
-    c_25 = TONE_MODE2,
-    c_50 = TONE_MODE3,
-    c_75 = TONE_MODE4,
-};
-
-pub const ToneParams = struct {
-    freq1: u16,
-    freq2: u16 = 0,
-    attack: u8 = 0,
-    decay: u8 = 0,
-    sustain: u8,
-    release: u8 = 0,
-    channel: ToneChannel,
-    duty_cycle: ToneDutyCycle = .c_12_5,
-    volume: u8 = 100,
-};
-
-fn Platform(Backend: anytype) type {
+fn PlatformTemplate(Backend: anytype) type {
     return struct {
         const Self = @This();
+        usingnamespace Constants;
+
+        pub const DrawColor = u4;
+        pub const DrawColors = struct {
+            dc1: DrawColor = 0,
+            dc2: DrawColor = 0,
+            dc3: DrawColor = 0,
+            dc4: DrawColor = 0,
+        };
+
+        pub const ToneChannel = enum(u32) {
+            pulse1 = TONE_PULSE1,
+            pulse2 = TONE_PULSE2,
+            triangle = TONE_TRIANGLE,
+            noise = TONE_NOISE,
+        };
+
+        pub const ToneDutyCycle = enum(u32) {
+            c_12_5 = TONE_MODE1,
+            c_25 = TONE_MODE2,
+            c_50 = TONE_MODE3,
+            c_75 = TONE_MODE4,
+        };
+
+        pub const ToneParams = struct {
+            freq1: u16,
+            freq2: u16 = 0,
+            attack: u8 = 0,
+            decay: u8 = 0,
+            sustain: u8,
+            release: u8 = 0,
+            channel: ToneChannel,
+            duty_cycle: ToneDutyCycle = .c_12_5,
+            volume: u8 = 100,
+        };
+
+        pub const GamepadId = enum {
+            gamepad1,
+            gamepad2,
+        };
+
         _backend: Backend,
 
         pub fn create(backend: Backend) Self {
@@ -350,7 +355,7 @@ fn Platform(Backend: anytype) type {
         }
 
         pub fn get_pixel(self: Self, x: u8, y: u8) DrawColor {
-            const pixel_idx = @intCast(usize, y) * CANVAS_SIZE + @intCast(usize, x);
+            const pixel_idx = @intCast(usize, y) * Self.CANVAS_SIZE + @intCast(usize, x);
             const byte_idx = pixel_idx / 4; // 4 pixels per byte
             const shift = @intCast(u3, pixel_idx & 0b11) * 2;
             const byte = self.get_framebuffer()[byte_idx];
@@ -409,5 +414,8 @@ fn Platform(Backend: anytype) type {
     };
 }
 
-pub const Wasm4Platform = Platform(Wasm4Backend);
-pub const TestPlatform = Platform(TestBackend);
+pub const Wasm4Platform = PlatformTemplate(Wasm4Backend);
+pub const TestPlatform = PlatformTemplate(TestBackend);
+
+pub const Platform = if (!builtin.is_test) Wasm4Platform else TestPlatform;
+pub var platform = Platform.create(.{});

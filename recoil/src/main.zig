@@ -2,8 +2,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const platform_mod = @import("platform.zig");
-pub const Platform = if (!builtin.is_test) platform_mod.Wasm4Platform else platform_mod.TestPlatform;
-pub var platform = Platform.create(.{});
+const platform = &platform_mod.platform;
 
 // Configure logging.
 pub const log_level: std.log.Level = .warn;

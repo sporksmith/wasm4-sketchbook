@@ -1,7 +1,8 @@
 const std = @import("std");
-const root = @import("root");
 
-const Platform = root.Platform;
+const platform_mod = @import("platform.zig");
+const Platform = platform_mod.Platform;
+const platform = &platform_mod.platform;
 
 const slog = std.log.scoped(.game);
 
@@ -65,6 +66,6 @@ pub const Game = struct {
             self.level.init(next);
         }
 
-        self.prev_gamepad = root.platform.get_gamepad(.gamepad1);
+        self.prev_gamepad = platform.get_gamepad(.gamepad1);
     }
 };

@@ -1,8 +1,11 @@
 const std = @import("std");
 const util = @import("util.zig");
 const root = @import("root");
-const platform = @import("platform.zig");
 const game = @import("game.zig");
+
+const platform_mod = @import("platform.zig");
+const Platform = platform_mod.Platform;
+const platform = &platform_mod.platform;
 
 const abs = util.abs;
 const add_velocity = util.add_velocity;
@@ -30,9 +33,9 @@ pub const MainLevel = struct {
     gameover: bool,
 
     pub fn init(self: *Self, options: MainLevelOptions) void {
-        const middle = (platform.CANVAS_SIZE / 2) << 8;
-        self.players[0] = Player.create((platform.CANVAS_SIZE / 3) << 8, middle, 3, options.p1_behavior, &self.bullets[0]);
-        self.players[1] = Player.create((platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, options.p2_behavior, &self.bullets[1]);
+        const middle = (Platform.CANVAS_SIZE / 2) << 8;
+        self.players[0] = Player.create((Platform.CANVAS_SIZE / 3) << 8, middle, 3, options.p1_behavior, &self.bullets[0]);
+        self.players[1] = Player.create((Platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, options.p2_behavior, &self.bullets[1]);
         self.bullets = .{.{null} ** bullets_per_player} ** n_players;
         self.explosions = .{null} ** @typeInfo(@TypeOf(self.explosions)).Array.len;
         self.first_stayalive_frame = null;
@@ -40,7 +43,7 @@ pub const MainLevel = struct {
     }
 
     pub fn update(self: *Self) ?game.LevelInitializer {
-        if (self.gameover and (root.platform.get_gamepad(.gamepad1) & (platform.BUTTON_1 | platform.BUTTON_2)) != 0) {
+        if (self.gameover and (platform.get_gamepad(.gamepad1) & (Platform.BUTTON_1 | Platform.BUTTON_2)) != 0) {
             return .splash_level;
         }
 
@@ -72,7 +75,7 @@ pub const MainLevel = struct {
         for (self.players) |*mp, i| {
             if (mp.*) |*p| {
                 if (!self.gameover and p.check_collisions()) {
-                    root.platform.tone(.{ .freq1 = 500, .attack = 16, .sustain = 38, .volume = 15, .channel = .triangle });
+                    platform.tone(.{ .freq1 = 500, .attack = 16, .sustain = 38, .volume = 15, .channel = .triangle });
                     self.explosions[i] = Explosion.create(.{ .x = p.x, .y = p.y, .vx = p.vx, .vy = p.vy, .spread = 0x20, .draw_color = p.draw_color });
                     mp.* = null;
                 } else {
@@ -86,8 +89,8 @@ pub const MainLevel = struct {
         if (live_player_count == 1) {
             if (!(self.players[live_player_idx orelse unreachable] orelse unreachable).is_human()) {
                 // Last player is AI
-                root.platform.text("Death!", 50, 80);
-                root.platform.text("X to restart", 30, 90);
+                platform.text("Death!", 50, 80);
+                platform.text("X to restart", 30, 90);
                 self.gameover = true;
             } else {
                 if (self.first_stayalive_frame) |_| {} else {
@@ -95,21 +98,21 @@ pub const MainLevel = struct {
                 }
                 const first_stayalive_frame = self.first_stayalive_frame orelse unreachable;
                 const stayalive_frames_elapsed = root.game.frame_count - first_stayalive_frame;
-                const stayalive_frames_remaining = 3 * platform.TARGET_FPS - @bitCast(i32, stayalive_frames_elapsed);
+                const stayalive_frames_remaining = 3 * Platform.TARGET_FPS - @bitCast(i32, stayalive_frames_elapsed);
                 if (stayalive_frames_remaining > 0 and stayalive_frames_elapsed > 0) {
-                    const seconds_remaining = @divTrunc(stayalive_frames_remaining, platform.TARGET_FPS) + 1;
+                    const seconds_remaining = @divTrunc(stayalive_frames_remaining, Platform.TARGET_FPS) + 1;
                     var buf: [20:0]u8 = undefined;
                     _ = std.fmt.bufPrintZ(&buf, "Stay Alive! {}", .{seconds_remaining}) catch unreachable;
-                    root.platform.text(&buf, 20, 80);
+                    platform.text(&buf, 20, 80);
                 } else if (stayalive_frames_remaining <= 0) {
-                    root.platform.text("Victory!", 50, 80);
-                    root.platform.text("X to restart", 30, 90);
+                    platform.text("Victory!", 50, 80);
+                    platform.text("X to restart", 30, 90);
                     self.gameover = true;
                 }
             }
         } else if (live_player_count == 0) {
-            root.platform.text("Draw!", 50, 80);
-            root.platform.text("X to restart", 30, 90);
+            platform.text("Draw!", 50, 80);
+            platform.text("X to restart", 30, 90);
             self.gameover = true;
         }
 
@@ -126,10 +129,10 @@ const Direction = enum {
 
 pub const HumanPlayerBehavior = struct {
     const Self = @This();
-    gamepad_id: platform.GamepadId,
+    gamepad_id: Platform.GamepadId,
 
     fn get_gamepad(self: *Self) u8 {
-        return root.platform.get_gamepad(self.gamepad_id);
+        return platform.get_gamepad(self.gamepad_id);
     }
 };
 
@@ -148,16 +151,16 @@ pub const RandomPlayerBehavior = struct {
         const max: i16 = if (self.frame == 2) 2 else 100;
         const r = root.game.rnd.random().intRangeAtMost(i16, 0, max);
         if (r == 0) {
-            return platform.BUTTON_LEFT;
+            return Platform.BUTTON_LEFT;
         }
         if (r == 1) {
-            return platform.BUTTON_UP;
+            return Platform.BUTTON_UP;
         }
         if (r == 2) {
-            return platform.BUTTON_DOWN;
+            return Platform.BUTTON_DOWN;
         }
         if (r == 3) {
-            return platform.BUTTON_RIGHT;
+            return Platform.BUTTON_RIGHT;
         }
         return 0;
     }
@@ -207,9 +210,9 @@ pub const Player = struct {
         var y = starty;
         // Hanging out at the right and bottom edges gives a
         // smaller hit box. Bug or feature?
-        while (x < (startx + Self.width) and x < platform.CANVAS_SIZE) : (x += 1) {
-            while (y < (starty + Self.height) and y < platform.CANVAS_SIZE) : (y += 1) {
-                const fb_color = root.platform.get_pixel(x, y);
+        while (x < (startx + Self.width) and x < Platform.CANVAS_SIZE) : (x += 1) {
+            while (y < (starty + Self.height) and y < Platform.CANVAS_SIZE) : (y += 1) {
+                const fb_color = platform.get_pixel(x, y);
                 // Background is color 1. Check for any color other than self or bg.
                 if (fb_color != 1 and fb_color != self.draw_color) {
                     slog.debug("collision pixel-color:{} draw-color:{}", .{ fb_color, self.draw_color });
@@ -252,23 +255,23 @@ pub const Player = struct {
         const bullet_y = self.y + (Self.height << 8) / 2;
         self.bullets[self.bulleti] = Bullets.create(.{ .x = bullet_x, .y = bullet_y, .vx = bullet_vx, .vy = bullet_vy, .spread = bullet_spread, .draw_color = self.draw_color });
         self.bulleti = (self.bulleti + 1) % self.bullets.len;
-        root.platform.tone(.{ .freq1 = 370, .freq2 = 160, .attack = 0, .decay = 0, .sustain = 38, .release = 16, .volume = 80, .channel = .triangle });
+        platform.tone(.{ .freq1 = 370, .freq2 = 160, .attack = 0, .decay = 0, .sustain = 38, .release = 16, .volume = 80, .channel = .triangle });
     }
 
     pub fn update(self: *Self) void {
         const gamepad = self.behavior.get_gamepad();
         const just_pressed = gamepad & (gamepad ^ self.prev_gamepad);
 
-        if (just_pressed & platform.BUTTON_LEFT != 0) {
+        if (just_pressed & Platform.BUTTON_LEFT != 0) {
             self.fire(.LEFT);
         }
-        if (just_pressed & platform.BUTTON_RIGHT != 0) {
+        if (just_pressed & Platform.BUTTON_RIGHT != 0) {
             self.fire(.RIGHT);
         }
-        if (just_pressed & platform.BUTTON_UP != 0) {
+        if (just_pressed & Platform.BUTTON_UP != 0) {
             self.fire(.UP);
         }
-        if (just_pressed & platform.BUTTON_DOWN != 0) {
+        if (just_pressed & Platform.BUTTON_DOWN != 0) {
             self.fire(.DOWN);
         }
         self.x = add_velocity(self.x, self.vx);
@@ -277,8 +280,8 @@ pub const Player = struct {
     }
 
     fn draw(self: Self) void {
-        root.platform.set_draw_colors(.{ .dc1 = self.draw_color });
-        root.platform.rect(self.x >> 8, self.y >> 8, Self.width, Self.height);
+        platform.set_draw_colors(.{ .dc1 = self.draw_color });
+        platform.rect(self.x >> 8, self.y >> 8, Self.width, Self.height);
     }
 };
 
@@ -300,7 +303,7 @@ fn Particles(comptime n: u32) type {
         ys: [n]u16,
         vxs: [n]i16,
         vys: [n]i16,
-        draw_colors: platform.DrawColors,
+        draw_colors: Platform.DrawColors,
 
         pub fn create(options: ParticleOptions) Self {
             var p: Self = undefined;
@@ -349,7 +352,7 @@ fn Particles(comptime n: u32) type {
 
         fn update_and_draw(self: *Self) void {
             var i: usize = 0;
-            root.platform.set_draw_colors(self.draw_colors);
+            platform.set_draw_colors(self.draw_colors);
             while (i < Self.n) : (i += 1) {
                 const old_x = self.xs[i];
                 const old_y = self.ys[i];
@@ -360,7 +363,7 @@ fn Particles(comptime n: u32) type {
 
                 // Draw a line between old and new positions *if* it didn't wrap around the screen on this frame.
                 if (abs_dx <= abs(self.vxs[i]) and abs_dy <= abs(self.vys[i])) {
-                    root.platform.line(old_x >> 8, old_y >> 8, new_x >> 8, new_y >> 8);
+                    platform.line(old_x >> 8, old_y >> 8, new_x >> 8, new_y >> 8);
                 }
 
                 self.xs[i] = new_x;

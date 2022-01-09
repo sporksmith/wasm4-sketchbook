@@ -1,9 +1,12 @@
-const platform = @import("platform.zig");
 const main = @import("main.zig");
 const main_level = @import("main_level.zig");
 const std = @import("std");
 const game = @import("game.zig");
 const root = @import("root");
+
+const platform_mod = @import("platform.zig");
+const Platform = platform_mod.Platform;
+const platform = &platform_mod.platform;
 
 const slog = std.log.scoped(.splash_level);
 
@@ -74,13 +77,13 @@ pub const SplashLevel = struct {
         std.mem.copy(u8, buf[0..4], Self.disk_magic[0..4]);
         buf[4] = @enumToInt(self.p1_type);
         buf[5] = @enumToInt(self.p2_type);
-        _ = root.platform.diskw(&buf, sz);
+        _ = platform.diskw(&buf, sz);
     }
 
     fn load(self: *Self) void {
         const sz = 6;
         var buf: [sz]u8 = undefined;
-        const nread = root.platform.diskr(&buf, sz);
+        const nread = platform.diskr(&buf, sz);
         if (nread != sz) {
             slog.debug("Failed to load: read {}", .{nread});
             return;
@@ -110,15 +113,15 @@ pub const SplashLevel = struct {
     }
 
     pub fn update(self: *Self) ?game.LevelInitializer {
-        const just_pressed = root.platform.get_gamepad(.gamepad1) & ~self.prev_gamepad;
+        const just_pressed = platform.get_gamepad(.gamepad1) & ~self.prev_gamepad;
 
-        if ((just_pressed & platform.BUTTON_DOWN) != 0) {
+        if ((just_pressed & Platform.BUTTON_DOWN) != 0) {
             self.menu_selection = enumNext(self.menu_selection);
         }
-        if ((just_pressed & platform.BUTTON_UP) != 0) {
+        if ((just_pressed & Platform.BUTTON_UP) != 0) {
             self.menu_selection = enumPrev(self.menu_selection);
         }
-        if ((just_pressed & (platform.BUTTON_RIGHT | platform.BUTTON_1 | platform.BUTTON_2)) != 0) {
+        if ((just_pressed & (Platform.BUTTON_RIGHT | Platform.BUTTON_1 | Platform.BUTTON_2)) != 0) {
             switch (self.menu_selection) {
                 .p1 => self.p1_type = enumNext(self.p1_type),
                 .p2 => self.p2_type = enumNext(self.p2_type),
@@ -128,7 +131,7 @@ pub const SplashLevel = struct {
                 },
             }
         }
-        if ((just_pressed & platform.BUTTON_LEFT) != 0) {
+        if ((just_pressed & Platform.BUTTON_LEFT) != 0) {
             switch (self.menu_selection) {
                 .p1 => self.p1_type = enumPrev(self.p1_type),
                 .p2 => self.p2_type = enumPrev(self.p2_type),
@@ -142,26 +145,26 @@ pub const SplashLevel = struct {
         const menu_color = 3;
         const selection_color = 2;
 
-        root.platform.set_draw_colors(.{ .dc1 = menu_color });
-        root.platform.text(MenuSelection.p1.string(), 10, 10);
-        root.platform.set_draw_colors(.{ .dc1 = selection_color });
-        root.platform.text(self.p1_type.string(), 10, 20);
+        platform.set_draw_colors(.{ .dc1 = menu_color });
+        platform.text(MenuSelection.p1.string(), 10, 10);
+        platform.set_draw_colors(.{ .dc1 = selection_color });
+        platform.text(self.p1_type.string(), 10, 20);
 
-        root.platform.set_draw_colors(.{ .dc1 = menu_color });
-        root.platform.text(MenuSelection.p2.string(), 10, 40);
-        root.platform.set_draw_colors(.{ .dc1 = selection_color });
-        root.platform.text(self.p2_type.string(), 10, 50);
+        platform.set_draw_colors(.{ .dc1 = menu_color });
+        platform.text(MenuSelection.p2.string(), 10, 40);
+        platform.set_draw_colors(.{ .dc1 = selection_color });
+        platform.text(self.p2_type.string(), 10, 50);
 
-        root.platform.set_draw_colors(.{ .dc1 = menu_color });
-        root.platform.text(MenuSelection.start.string(), 10, 70);
+        platform.set_draw_colors(.{ .dc1 = menu_color });
+        platform.text(MenuSelection.start.string(), 10, 70);
 
         const selection_y: i32 = switch (self.menu_selection) {
             .p1 => 10,
             .p2 => 40,
             .start => 70,
         };
-        root.platform.text(">", 0, selection_y);
-        self.prev_gamepad = root.platform.get_gamepad(.gamepad1);
+        platform.text(">", 0, selection_y);
+        self.prev_gamepad = platform.get_gamepad(.gamepad1);
         return null;
     }
 };

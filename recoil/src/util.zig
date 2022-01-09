@@ -1,6 +1,9 @@
 const std = @import("std");
 const w4 = @import("wasm4.zig");
-const platform = @import("platform.zig");
+
+const platform_mod = @import("platform.zig");
+const Platform = platform_mod.Platform;
+const platform = &platform_mod.platform;
 
 fn pack(dst: []u8, val: anytype) []u8 {
     const T = comptime @TypeOf(val);
@@ -104,7 +107,7 @@ pub fn add_velocity(pos: u16, vel: i16) u16 {
     const pos32 = @as(i32, pos);
     const vel32 = @as(i32, vel);
     const sum = pos32 + vel32;
-    const max = @as(i32, platform.CANVAS_SIZE) << 8;
+    const max = @as(i32, Platform.CANVAS_SIZE) << 8;
     return @intCast(u16, if (sum > 0) @mod(sum, max) else max + sum);
 }
 
