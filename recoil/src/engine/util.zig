@@ -125,6 +125,14 @@ pub fn FixedPoint(comptime signed: bool, comptime whole_bits: u32, comptime frac
             return @This(){ .val = @as(Base, @as(Whole, val)) << frac_bits };
         }
 
+        pub fn fromFloat(val: anytype) @This() {
+            return @This(){ .val = @floatToInt(Base, @intToFloat(@TypeOf(val), 1 << frac_bits) * val) };
+        }
+
+        pub fn toFloat(self: @This(), comptime T: type) T {
+            return @intToFloat(T, self.val) / @intToFloat(T, 1 << frac_bits);
+        }
+
         pub fn add(self: @This(), other: @This()) @This() {
             return @This(){ .val = self.val + other.val };
         }
@@ -145,6 +153,21 @@ pub fn FixedPoint(comptime signed: bool, comptime whole_bits: u32, comptime frac
             return @This(){ .val = @divTrunc(self.val, @as(Base, other)) };
         }
     };
+}
+
+test "fixed point floating point round trip" {
+    const expectEqual = std.testing.expectEqual;
+    const expectApproxEqAbs = std.testing.expectApproxEqAbs;
+    const FP = FixedPoint(true, 8, 8);
+
+    try expectEqual(@as(f32, 1.5), FP.fromFloat(1.5).toFloat(f32));
+    try expectEqual(@as(f32, 1.75), FP.fromFloat(1.75).toFloat(f32));
+
+    try expectApproxEqAbs(@as(f32, 1.1), FP.fromFloat(1.1).toFloat(f32), 1.0 / 256.0);
+}
+
+test {
+    std.testing.refAllDecls(@This());
 }
 
 pub fn abs(x: anytype) @TypeOf(x) {

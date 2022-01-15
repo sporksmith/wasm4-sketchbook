@@ -50,3 +50,7 @@ pub fn Prelude(pplatform: anytype) type {
 //        }
 //    };
 //}
+
+test {
+    std.testing.refAllDecls(@This());
+}

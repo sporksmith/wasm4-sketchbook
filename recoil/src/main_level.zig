@@ -11,8 +11,6 @@ const Game = game_mod.Game;
 const game = &game_mod.game;
 
 const abs = util.abs;
-const PixelOffset = util.PixelOffset;
-const PixelPosition = util.PixelPosition;
 
 const slog = std.log.scoped(.main_level);
 
@@ -236,9 +234,9 @@ pub const Player = struct {
     }
 
     fn fire(self: *Self, direction: Direction) void {
-        const bullet_velocity = FP.create(200).idivTrunc(256);
-        const bullet_spread = FP.create(20).idivTrunc(256);
-        const recoil = FP.create(64).idivTrunc(256);
+        const bullet_velocity = FP.fromFloat(1.5);
+        const bullet_spread = FP.fromFloat(1.0);
+        const recoil = FP.fromFloat(0.25);
         var bullet_vx = self.vx;
         var bullet_vy = self.vy;
         switch (direction) {
@@ -386,4 +384,8 @@ test "fire" {
     const third = FP.create(Platform.CANVAS_SIZE / 3);
     var player = Player.create(third, middle, 3, .{ .Human = .{ .gamepad_id = .gamepad1 } }, &bullets);
     player.fire(.LEFT);
+}
+
+test {
+    std.testing.refAllDecls(@This());
 }
