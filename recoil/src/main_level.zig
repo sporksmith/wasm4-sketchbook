@@ -53,8 +53,8 @@ pub const MainLevel = struct {
 
         for (self.players) |*mp| {
             if (mp.*) |*p| {
+                // Don't draw yet - no player-player collisions.
                 p.update();
-                p.draw();
             }
         }
 
@@ -86,6 +86,12 @@ pub const MainLevel = struct {
                     live_player_count += 1;
                     live_player_idx = i;
                 }
+            }
+        }
+
+        for (self.players) |*mp| {
+            if (mp.*) |*p| {
+                p.draw();
             }
         }
 
@@ -210,11 +216,14 @@ pub const Player = struct {
         const mid_x = self.x.addAndWrap(Player.width.divIntTrunc(2));
         const mid_y = self.y.addAndWrap(Player.height.divIntTrunc(2));
         const fb_color = platform.get_pixel(mid_x.toInt(), mid_y.toInt());
+
+        // Instead of checking every particle, look in the framebuffer.
         // Background is color 1. Check for any color other than self or bg.
         if (fb_color != 1 and fb_color != self.draw_color) {
             slog.debug("collision pixel-color:{} draw-color:{}", .{ fb_color, self.draw_color });
             return true;
         }
+
         return false;
     }
 
