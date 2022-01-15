@@ -152,6 +152,10 @@ pub fn FixedPoint(comptime signed: bool, comptime whole_bits: u32, comptime frac
         pub fn idivTrunc(self: @This(), other: anytype) @This() {
             return @This(){ .val = @divTrunc(self.val, @as(Base, other)) };
         }
+
+        pub fn order(self: @This(), other: @This()) std.math.Order {
+            return std.math.order(self.val, other.val);
+        }
     };
 }
 
@@ -164,6 +168,15 @@ test "fixed point floating point round trip" {
     try expectEqual(@as(f32, 1.75), FP.fromFloat(1.75).toFloat(f32));
 
     try expectApproxEqAbs(@as(f32, 1.1), FP.fromFloat(1.1).toFloat(f32), 1.0 / 256.0);
+}
+
+test "fixed point order" {
+    const expectEqual = std.testing.expectEqual;
+    const FP = FixedPoint(true, 8, 8);
+
+    try expectEqual(FP.fromFloat(1.5).order(FP.fromFloat(1.4)), .gt);
+    try expectEqual(FP.fromFloat(1.5).order(FP.fromFloat(1.5)), .eq);
+    try expectEqual(FP.fromFloat(1.5).order(FP.fromFloat(1.6)), .lt);
 }
 
 test {

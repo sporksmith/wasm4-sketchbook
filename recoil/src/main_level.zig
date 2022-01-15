@@ -235,7 +235,7 @@ pub const Player = struct {
 
     fn fire(self: *Self, direction: Direction) void {
         const bullet_velocity = FP.fromFloat(1.5);
-        const bullet_spread = FP.fromFloat(1.0);
+        const bullet_spread = FP.fromFloat(0.1);
         const recoil = FP.fromFloat(0.25);
         var bullet_vx = self.vx;
         var bullet_vy = self.vy;
@@ -360,14 +360,16 @@ fn Particles(comptime n: u32) type {
             while (i < Self.n) : (i += 1) {
                 const old_x = self.xs[i];
                 const old_y = self.ys[i];
-                const new_x = old_x.add(self.vxs[i]).mod(canvas_size_fp);
-                const new_y = old_y.add(self.vys[i]).mod(canvas_size_fp);
-                const abs_dx = abs(@intCast(i32, new_x.val) - @intCast(i32, old_x.val));
-                const abs_dy = abs(@intCast(i32, new_y.val) - @intCast(i32, old_y.val));
+
+                const new_x = old_x.add(self.vxs[i]);
+                const new_x_wrapped = new_x.mod(canvas_size_fp);
+
+                const new_y = old_y.add(self.vys[i]);
+                const new_y_wrapped = new_y.mod(canvas_size_fp);
 
                 // Draw a line between old and new positions *if* it didn't wrap around the screen on this frame.
-                if (abs_dx <= abs(self.vxs[i].val) and abs_dy <= abs(self.vys[i].val)) {
-                    platform.line(old_x.whole(), old_y.whole(), new_x.whole(), new_y.whole());
+                if (new_x.order(new_x_wrapped).compare(.eq) and new_y.order(new_y_wrapped).compare(.eq)) {
+                    platform.line(old_x.whole(), old_y.whole(), new_x_wrapped.whole(), new_y_wrapped.whole());
                 }
 
                 self.xs[i] = new_x;
