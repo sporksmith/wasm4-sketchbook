@@ -103,13 +103,49 @@ pub fn tracef(comptime msg: [:0]const u8, args: anytype) void {
     platform.tracef(msg.ptr, &buf);
 }
 
-pub fn add_velocity(pos: u16, vel: i16) u16 {
-    const pos32 = @as(i32, pos);
-    const vel32 = @as(i32, vel);
-    const sum = pos32 + vel32;
-    const max = @as(i32, Platform.CANVAS_SIZE) << 8;
-    return @intCast(u16, if (sum > 0) @mod(sum, max) else max + sum);
-}
+pub const PixelOffset = struct {
+    val: i16,
+
+    pub fn toInt(self: @This()) i8 {
+        return @intCast(i8, self.val >> 8);
+    }
+
+    pub fn fromInt(val: i8) @This() {
+        return PixelOffset{ .val = @as(i16, val) << 8 };
+    }
+
+    pub fn add(self: @This(), other: @This()) @This() {
+        return PixelOffset{ .val = self.val + other.val };
+    }
+
+    pub fn negate(self: @This()) @This() {
+        return PixelOffset{ .val = -self.val };
+    }
+
+    pub fn divIntTrunc(self: @This(), other: i16) @This() {
+        return PixelOffset{ .val = @divTrunc(self.val, other) };
+    }
+};
+
+pub const PixelPosition = struct {
+    val: u16,
+
+    pub fn addAndWrap(self: @This(), offset: PixelOffset) @This() {
+        const pos32 = @as(i32, self.val);
+        const off32 = @as(i32, offset.val);
+        const sum = pos32 + off32;
+        const max = @as(i32, Platform.CANVAS_SIZE) << 8;
+        return PixelPosition{ .val = @intCast(u16, if (sum > 0) @mod(sum, max) else max + sum) };
+    }
+
+    pub fn toInt(self: @This()) u8 {
+        return @intCast(u8, self.val >> 8);
+    }
+
+    pub fn fromInt(val: u8) @This() {
+        return PixelPosition{ .val = @as(u16, val) << 8 };
+    }
+};
 
 pub fn abs(x: anytype) @TypeOf(x) {
     return if (x >= 0) x else -x;

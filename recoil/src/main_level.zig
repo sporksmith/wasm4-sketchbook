@@ -11,7 +11,8 @@ const Game = game_mod.Game;
 const game = &game_mod.game;
 
 const abs = util.abs;
-const add_velocity = util.add_velocity;
+const PixelOffset = util.PixelOffset;
+const PixelPosition = util.PixelPosition;
 
 const slog = std.log.scoped(.main_level);
 
@@ -36,9 +37,9 @@ pub const MainLevel = struct {
     gameover: bool,
 
     pub fn init(self: *Self, options: MainLevelOptions) void {
-        const middle = (Platform.CANVAS_SIZE / 2) << 8;
-        self.players[0] = Player.create((Platform.CANVAS_SIZE / 3) << 8, middle, 3, options.p1_behavior, &self.bullets[0]);
-        self.players[1] = Player.create((Platform.CANVAS_SIZE * 2 / 3) << 8, middle, 2, options.p2_behavior, &self.bullets[1]);
+        const middle = PixelPosition.fromInt(Platform.CANVAS_SIZE / 2);
+        self.players[0] = Player.create(PixelPosition.fromInt((Platform.CANVAS_SIZE / 3)), middle, 3, options.p1_behavior, &self.bullets[0]);
+        self.players[1] = Player.create(PixelPosition.fromInt(Platform.CANVAS_SIZE * 2 / 3), middle, 2, options.p2_behavior, &self.bullets[1]);
         self.bullets = .{.{null} ** bullets_per_player} ** n_players;
         self.explosions = .{null} ** @typeInfo(@TypeOf(self.explosions)).Array.len;
         self.first_stayalive_frame = null;
@@ -79,7 +80,7 @@ pub const MainLevel = struct {
             if (mp.*) |*p| {
                 if (!self.gameover and p.check_collisions()) {
                     platform.tone(.{ .freq1 = 500, .attack = 16, .sustain = 38, .volume = 15, .channel = .triangle });
-                    self.explosions[i] = Explosion.create(.{ .x = p.x, .y = p.y, .vx = p.vx, .vy = p.vy, .spread = 0x20, .draw_color = p.draw_color });
+                    self.explosions[i] = Explosion.create(.{ .x = p.x, .y = p.y, .vx = p.vx, .vy = p.vy, .spread = PixelOffset{ .val = 0x20 }, .draw_color = p.draw_color });
                     mp.* = null;
                 } else {
                     live_player_count += 1;
@@ -184,10 +185,10 @@ pub const PlayerBehavior = union(enum) {
 pub const Player = struct {
     const Self = @This();
 
-    x: u16,
-    y: u16,
-    vx: i16,
-    vy: i16,
+    x: PixelPosition,
+    y: PixelPosition,
+    vx: PixelOffset,
+    vy: PixelOffset,
     draw_color: u4,
     behavior: PlayerBehavior,
     bullets: *[MainLevel.bullets_per_player]?Bullets,
@@ -195,9 +196,8 @@ pub const Player = struct {
 
     prev_gamepad: u8 = 0xff,
 
-    const width = 3;
-    const height = 3;
-    const accel = 30;
+    const width = PixelOffset.fromInt(5);
+    const height = PixelOffset.fromInt(5);
 
     pub fn is_human(self: Self) bool {
         return switch (self.behavior) {
@@ -207,55 +207,47 @@ pub const Player = struct {
     }
 
     pub fn check_collisions(self: Self) bool {
-        const startx = @intCast(u8, self.x >> 8);
-        const starty = @intCast(u8, self.y >> 8);
-        var x = startx;
-        var y = starty;
-        // Hanging out at the right and bottom edges gives a
-        // smaller hit box. Bug or feature?
-        while (x < (startx + Self.width) and x < Platform.CANVAS_SIZE) : (x += 1) {
-            while (y < (starty + Self.height) and y < Platform.CANVAS_SIZE) : (y += 1) {
-                const fb_color = platform.get_pixel(x, y);
-                // Background is color 1. Check for any color other than self or bg.
-                if (fb_color != 1 and fb_color != self.draw_color) {
-                    slog.debug("collision pixel-color:{} draw-color:{}", .{ fb_color, self.draw_color });
-                    return true;
-                }
-            }
+        const mid_x = self.x.addAndWrap(Player.width.divIntTrunc(2));
+        const mid_y = self.y.addAndWrap(Player.height.divIntTrunc(2));
+        const fb_color = platform.get_pixel(mid_x.toInt(), mid_y.toInt());
+        // Background is color 1. Check for any color other than self or bg.
+        if (fb_color != 1 and fb_color != self.draw_color) {
+            slog.debug("collision pixel-color:{} draw-color:{}", .{ fb_color, self.draw_color });
+            return true;
         }
         return false;
     }
 
-    pub fn create(x: u16, y: u16, draw_color: u4, behavior: PlayerBehavior, bullets: *[MainLevel.bullets_per_player]?Bullets) Self {
-        return Self{ .x = x, .y = y, .vx = 0, .vy = 0, .draw_color = draw_color, .behavior = behavior, .bullets = bullets };
+    pub fn create(x: PixelPosition, y: PixelPosition, draw_color: u4, behavior: PlayerBehavior, bullets: *[MainLevel.bullets_per_player]?Bullets) Self {
+        return Self{ .x = x, .y = y, .vx = PixelOffset.fromInt(0), .vy = PixelOffset.fromInt(0), .draw_color = draw_color, .behavior = behavior, .bullets = bullets };
     }
 
     fn fire(self: *Self, direction: Direction) void {
-        const bullet_velocity = 200;
-        const bullet_spread = 20;
-        const recoil = 1 << 6;
+        const bullet_velocity = PixelOffset{ .val = 200 };
+        const bullet_spread = PixelOffset{ .val = 20 };
+        const recoil = PixelOffset{ .val = 1 << 6 };
         var bullet_vx = self.vx;
         var bullet_vy = self.vy;
         switch (direction) {
             .LEFT => {
-                bullet_vx -= bullet_velocity;
-                self.vx += recoil;
+                bullet_vx = bullet_vx.add(bullet_velocity.negate());
+                self.vx = self.vx.add(recoil);
             },
             .RIGHT => {
-                bullet_vx += bullet_velocity;
-                self.vx -= recoil;
+                bullet_vx = bullet_vx.add(bullet_velocity);
+                self.vx = self.vx.add(recoil.negate());
             },
             .UP => {
-                bullet_vy -= bullet_velocity;
-                self.vy += recoil;
+                bullet_vy = bullet_vy.add(bullet_velocity.negate());
+                self.vy = self.vy.add(recoil);
             },
             .DOWN => {
-                bullet_vy += bullet_velocity;
-                self.vy -= recoil;
+                bullet_vy = bullet_vy.add(bullet_velocity);
+                self.vy = self.vy.add(recoil.negate());
             },
         }
-        const bullet_x = self.x + (Self.width << 8) / 2;
-        const bullet_y = self.y + (Self.height << 8) / 2;
+        const bullet_x = self.x.addAndWrap(Self.width.divIntTrunc(2));
+        const bullet_y = self.y.addAndWrap(Self.height.divIntTrunc(2));
         self.bullets[self.bulleti] = Bullets.create(.{ .x = bullet_x, .y = bullet_y, .vx = bullet_vx, .vy = bullet_vy, .spread = bullet_spread, .draw_color = self.draw_color });
         self.bulleti = (self.bulleti + 1) % self.bullets.len;
         platform.tone(.{ .freq1 = 370, .freq2 = 160, .attack = 0, .decay = 0, .sustain = 38, .release = 16, .volume = 80, .channel = .triangle });
@@ -277,23 +269,23 @@ pub const Player = struct {
         if (just_pressed & Platform.BUTTON_DOWN != 0) {
             self.fire(.DOWN);
         }
-        self.x = add_velocity(self.x, self.vx);
-        self.y = add_velocity(self.y, self.vy);
+        self.x = self.x.addAndWrap(self.vx);
+        self.y = self.y.addAndWrap(self.vy);
         self.prev_gamepad = gamepad;
     }
 
     fn draw(self: Self) void {
         platform.set_draw_colors(.{ .dc1 = self.draw_color });
-        platform.rect(self.x >> 8, self.y >> 8, Self.width, Self.height);
+        platform.rect(self.x.toInt(), self.y.toInt(), @intCast(u32, Self.width.toInt()), @intCast(u32, Self.height.toInt()));
     }
 };
 
 const ParticleOptions = struct {
-    x: u16,
-    y: u16,
-    vx: i16,
-    vy: i16,
-    spread: u15,
+    x: PixelPosition,
+    y: PixelPosition,
+    vx: PixelOffset,
+    vy: PixelOffset,
+    spread: PixelOffset,
     draw_color: u4,
 };
 
@@ -302,16 +294,16 @@ fn Particles(comptime n: u32) type {
         const Self = @This();
         const n = n;
 
-        xs: [n]u16,
-        ys: [n]u16,
-        vxs: [n]i16,
-        vys: [n]i16,
+        xs: [n]PixelPosition,
+        ys: [n]PixelPosition,
+        vxs: [n]PixelOffset,
+        vys: [n]PixelOffset,
         draw_colors: Platform.DrawColors,
 
         pub fn create(options: ParticleOptions) Self {
             var p: Self = undefined;
-            const rand_most = @intCast(i16, options.spread);
-            const rand_min = -rand_most;
+            const rand_most = options.spread;
+            const rand_min = PixelOffset{ .val = -rand_most.val };
             p.init_xs(options.x, rand_min, rand_most);
             p.init_ys(options.y, rand_min, rand_most);
             p.init_vxs(options.vx, rand_min, rand_most);
@@ -321,35 +313,33 @@ fn Particles(comptime n: u32) type {
             return p;
         }
 
-        pub fn init_xs(self: *Self, x: u16, rand_min: i16, rand_most: i16) void {
+        pub fn init_xs(self: *Self, x: PixelPosition, rand_min: PixelOffset, rand_most: PixelOffset) void {
             var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                const err = game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
-                // XXX: rename
-                self.xs[i] = util.add_velocity(x, err);
+                const err = PixelOffset{ .val = game.rnd.random().intRangeAtMost(i16, rand_min.val, rand_most.val) };
+                self.xs[i] = x.addAndWrap(err);
             }
         }
 
-        pub fn init_ys(self: *Self, y: u16, rand_min: i16, rand_most: i16) void {
+        pub fn init_ys(self: *Self, y: PixelPosition, rand_min: PixelOffset, rand_most: PixelOffset) void {
             var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                const err = game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
-                // XXX: rename
-                self.ys[i] = util.add_velocity(y, err);
+                const err = PixelOffset{ .val = game.rnd.random().intRangeAtMost(i16, rand_min.val, rand_most.val) };
+                self.ys[i] = y.addAndWrap(err);
             }
         }
 
-        pub fn init_vxs(self: *Self, vx: i16, rand_min: i16, rand_most: i16) void {
+        pub fn init_vxs(self: *Self, vx: PixelOffset, rand_min: PixelOffset, rand_most: PixelOffset) void {
             var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                self.vxs[i] = vx + game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
+                self.vxs[i] = vx.add(PixelOffset{ .val = game.rnd.random().intRangeAtMost(i16, rand_min.val, rand_most.val) });
             }
         }
 
-        pub fn init_vys(self: *Self, vy: i16, rand_min: i16, rand_most: i16) void {
+        pub fn init_vys(self: *Self, vy: PixelOffset, rand_min: PixelOffset, rand_most: PixelOffset) void {
             var i: usize = 0;
             while (i < Self.n) : (i += 1) {
-                self.vys[i] = vy + game.rnd.random().intRangeAtMost(i16, rand_min, rand_most);
+                self.vys[i] = vy.add(PixelOffset{ .val = game.rnd.random().intRangeAtMost(i16, rand_min.val, rand_most.val) });
             }
         }
 
@@ -359,14 +349,14 @@ fn Particles(comptime n: u32) type {
             while (i < Self.n) : (i += 1) {
                 const old_x = self.xs[i];
                 const old_y = self.ys[i];
-                const new_x = add_velocity(old_x, self.vxs[i]);
-                const new_y = add_velocity(old_y, self.vys[i]);
-                const abs_dx = abs(@intCast(i32, new_x) - @intCast(i32, old_x));
-                const abs_dy = abs(@intCast(i32, new_y) - @intCast(i32, old_y));
+                const new_x = old_x.addAndWrap(self.vxs[i]);
+                const new_y = old_y.addAndWrap(self.vys[i]);
+                const abs_dx = abs(@intCast(i32, new_x.val) - @intCast(i32, old_x.val));
+                const abs_dy = abs(@intCast(i32, new_y.val) - @intCast(i32, old_y.val));
 
                 // Draw a line between old and new positions *if* it didn't wrap around the screen on this frame.
-                if (abs_dx <= abs(self.vxs[i]) and abs_dy <= abs(self.vys[i])) {
-                    platform.line(old_x >> 8, old_y >> 8, new_x >> 8, new_y >> 8);
+                if (abs_dx <= abs(self.vxs[i].val) and abs_dy <= abs(self.vys[i].val)) {
+                    platform.line(old_x.toInt(), old_y.toInt(), new_x.toInt(), new_y.toInt());
                 }
 
                 self.xs[i] = new_x;
