@@ -103,49 +103,49 @@ pub fn tracef(comptime msg: [:0]const u8, args: anytype) void {
     platform.tracef(msg.ptr, &buf);
 }
 
-pub const PixelOffset = struct {
-    val: i16,
+pub fn FixedPoint(comptime signed: bool, comptime whole_bits: u32, comptime frac_bits: u32) type {
+    return struct {
+        pub const Base = @Type(.{
+            .Int = .{
+                .signedness = if (signed) .signed else .unsigned,
+                .bits = whole_bits + frac_bits,
+            },
+        });
 
-    pub fn toInt(self: @This()) i8 {
-        return @intCast(i8, self.val >> 8);
-    }
+        pub const Whole = @Type(.{
+            .Int = .{
+                .signedness = if (signed) .signed else .unsigned,
+                .bits = whole_bits,
+            },
+        });
 
-    pub fn fromInt(val: i8) @This() {
-        return PixelOffset{ .val = @as(i16, val) << 8 };
-    }
+        val: Base,
 
-    pub fn add(self: @This(), other: @This()) @This() {
-        return PixelOffset{ .val = self.val + other.val };
-    }
+        pub fn create(val: anytype) @This() {
+            return @This(){ .val = @as(Base, @as(Whole, val)) << frac_bits };
+        }
 
-    pub fn negate(self: @This()) @This() {
-        return PixelOffset{ .val = -self.val };
-    }
+        pub fn add(self: @This(), other: @This()) @This() {
+            return @This(){ .val = self.val + other.val };
+        }
 
-    pub fn divIntTrunc(self: @This(), other: i16) @This() {
-        return PixelOffset{ .val = @divTrunc(self.val, other) };
-    }
-};
+        pub fn neg(self: @This()) @This() {
+            return @This(){ .val = -self.val };
+        }
 
-pub const PixelPosition = struct {
-    val: u16,
+        pub fn mod(self: @This(), other: @This()) @This() {
+            return @This(){ .val = @mod(self.val, other.val) };
+        }
 
-    pub fn addAndWrap(self: @This(), offset: PixelOffset) @This() {
-        const pos32 = @as(i32, self.val);
-        const off32 = @as(i32, offset.val);
-        const sum = pos32 + off32;
-        const max = @as(i32, Platform.CANVAS_SIZE) << 8;
-        return PixelPosition{ .val = @intCast(u16, if (sum > 0) @mod(sum, max) else max + sum) };
-    }
+        pub fn whole(self: @This()) Whole {
+            return @intCast(Whole, self.val >> frac_bits);
+        }
 
-    pub fn toInt(self: @This()) u8 {
-        return @intCast(u8, self.val >> 8);
-    }
-
-    pub fn fromInt(val: u8) @This() {
-        return PixelPosition{ .val = @as(u16, val) << 8 };
-    }
-};
+        pub fn idivTrunc(self: @This(), other: anytype) @This() {
+            return @This(){ .val = @divTrunc(self.val, @as(Base, other)) };
+        }
+    };
+}
 
 pub fn abs(x: anytype) @TypeOf(x) {
     return if (x >= 0) x else -x;
