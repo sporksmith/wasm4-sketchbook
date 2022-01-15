@@ -378,7 +378,8 @@ fn Particles(comptime n: u32) type {
 test "fire" {
     // Regression test for overflow
     var bullets: [MainLevel.bullets_per_player]?Bullets = undefined;
-    const middle = (Platform.CANVAS_SIZE / 2) << 8;
-    var player = Player.create((Platform.CANVAS_SIZE / 3) << 8, middle, 3, .{ .Human = .{ .gamepad_id = .gamepad1 } }, &bullets);
+    const middle = util.PixelPosition.fromInt(Platform.CANVAS_SIZE / 2);
+    const third = util.PixelPosition.fromInt(Platform.CANVAS_SIZE / 3);
+    var player = Player.create(third, middle, 3, .{ .Human = .{ .gamepad_id = .gamepad1 } }, &bullets);
     player.fire(.LEFT);
 }

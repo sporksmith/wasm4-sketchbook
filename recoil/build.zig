@@ -14,4 +14,12 @@ pub fn build(b: *std.build.Builder) void {
     lib.global_base = 6560;
     lib.stack_size = 8192;
     lib.install();
+
+    const test_step = b.step("test", "Run the tests");
+
+    var main_test = b.addTest("src/main.zig");
+    test_step.dependOn(&main_test.step);
+    main_test.setBuildMode(mode);
+    main_test.addPackagePath("engine", "src/engine.zig");
+    //test_stage2.single_threaded = single_threaded;
 }
