@@ -372,8 +372,8 @@ fn Particles(comptime n: u32) type {
                     platform.line(old_x.whole(), old_y.whole(), new_x_wrapped.whole(), new_y_wrapped.whole());
                 }
 
-                self.xs[i] = new_x;
-                self.ys[i] = new_y;
+                self.xs[i] = new_x_wrapped;
+                self.ys[i] = new_y_wrapped;
             }
         }
     };
